@@ -1,0 +1,35 @@
+{
+  "name": "obsidian-retrieva",
+  "version": "0.0.1",
+  "description": "Markdown-native spaced repetition for Obsidian",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc --noEmit && node esbuild.config.mjs production",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "obsidian",
+    "spaced-repetition",
+    "fsrs"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "builtin-modules": "^5.0.0",
+    "esbuild": "^0.25.0",
+    "obsidian": "latest",
+    "prettier": "^3.9.6",
+    "tslib": "^2.8.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.0"
+  },
+  "dependencies": {
+    "i18next": "^26.3.6",
+    "ts-fsrs": "^5.2.3",
+    "yaml": "^2.9.0"
+  }
+}

@@ -1,0 +1,5 @@
+main.js
+node_modules/
+coverage/
+docs/initial-design.md
+package-lock.json
