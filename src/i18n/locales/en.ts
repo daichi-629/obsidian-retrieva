@@ -45,6 +45,8 @@ export const en = {
   "scope.newTag": "New tag scope",
   "scope.selectTag": "Select one tag.",
   "scope.tag": "Tag",
+  "scope.cardTags": "Tags used by Retrieva cards",
+  "scope.noCardTags": "No deck tags were found on Retrieva cards.",
   "scope.saveWithName": "Save with a name",
   "scope.name": "Name",
   "scope.chooseFirst": "Choose a tag first.",

@@ -4,6 +4,7 @@ import {
   hasCardTag,
   IDENTIFIERS,
   initializeCardMarkdown,
+  collectScopeTags,
   parseCardMarkdown,
   parsePresetMarkdown,
   uuidv7,
@@ -188,6 +189,9 @@ export class CardIndex {
     return [...this.cards.values()].filter(card =>
       card.tags.some(value => value === clean || value.startsWith(`${clean}/`)),
     );
+  }
+  scopeTags(): string[] {
+    return collectScopeTags(this.cards.values());
   }
   presetPaths(): string[] {
     return [...this.presets.values()].map(preset => preset.sourcePath);

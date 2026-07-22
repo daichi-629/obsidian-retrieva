@@ -36,6 +36,10 @@ describe("project skill installer", () => {
     });
     expect(vault.files.get(PROJECT_SKILL_PATHS[0])).toBe(vault.files.get(PROJECT_SKILL_PATHS[1]));
     expect(vault.files.get(PROJECT_SKILL_PATHS[0])).toContain("name: retrieva");
+    expect(vault.files.get(PROJECT_SKILL_PATHS[0])).toContain(
+      "ask the user before creating a card",
+    );
+    expect(vault.files.get(PROJECT_SKILL_PATHS[0])).not.toContain("default is `Cards`");
   });
 
   it("is idempotent and updates stale copies", async () => {

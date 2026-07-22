@@ -25,7 +25,7 @@ Card references can be `![[Note#Question]]` and `![[Note#Answer]]`. For paragrap
 
 ## Card files
 
-Create cards in the configured cards folder (the default is `Cards`). When an LLM creates a card, write only the user-owned frontmatter, front, answer marker, and back:
+Place card files according to the vault's existing instructions and organization. Inspect project guidance and existing card locations; do not assume a fixed card directory. If the intended location cannot be determined, ask the user before creating a card. When an LLM creates a card, write only the user-owned frontmatter, front, answer marker, and back:
 
 ```markdown
 ---

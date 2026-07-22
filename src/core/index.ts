@@ -10,5 +10,6 @@ export * from "./ports";
 export * from "./queue";
 export * from "./recovery";
 export * from "./scheduler";
+export * from "./scope-tags";
 export * from "./types";
 export * from "./validation";

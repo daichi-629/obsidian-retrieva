@@ -47,6 +47,8 @@ export const ja = {
   "scope.newTag": "新しいタグ範囲",
   "scope.selectTag": "タグを一つ選択してください。",
   "scope.tag": "タグ",
+  "scope.cardTags": "Retrievaカードで使用中のタグ",
+  "scope.noCardTags": "Retrievaカードにデッキ用タグがありません。",
   "scope.saveWithName": "名前を付けて保存",
   "scope.name": "名前",
   "scope.chooseFirst": "先にタグを選択してください。",

@@ -50,6 +50,19 @@
   justify-content: space-between;
   gap: var(--size-4-2);
 }
+.retrieva-tag-candidates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+  margin-bottom: var(--size-4-4);
+}
+.retrieva-tag-candidate {
+  font-size: var(--font-ui-small);
+}
+.retrieva-tag-candidates-label {
+  flex-basis: 100%;
+  color: var(--text-muted);
+}
 .retrieva-editor {
   width: 100%;
   min-height: 18rem;

@@ -4,6 +4,7 @@ import {
   NEW_STATE,
   appendEvent,
   buildQueue,
+  collectScopeTags,
   calculateAnswerCandidates,
   createReviewEvent,
   dueNow,
@@ -163,6 +164,20 @@ describe("linear history", () => {
 });
 
 describe("scheduling and queues", () => {
+  it("lists only distinct deck tags used by Retrieva cards", () => {
+    const cards = ["z/deck", "alpha", "alpha"].map((tag, index) => ({
+      path: `${index}.md`,
+      cardId: `C${index}`,
+      presetId: "default",
+      siblingGroupId: null,
+      tags: [IDENTIFIERS.cardTag, tag],
+      state: { ...NEW_STATE },
+      lastEventId: `E${index}`,
+      createdAt: now.toISOString(),
+      events: [],
+    })) satisfies IndexedCard[];
+    expect(collectScopeTags(cards)).toEqual(["alpha", "z/deck"]);
+  });
   it("returns four FSRS outcomes with short-term instants", () => {
     const candidates = calculateAnswerCandidates(NEW_STATE, preset, now);
     expect(Object.keys(candidates)).toEqual(["again", "hard", "good", "easy"]);

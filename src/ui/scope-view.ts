@@ -1,4 +1,4 @@
-import { getAllTags, ItemView, Notice, Setting, type WorkspaceLeaf } from "obsidian";
+import { ItemView, Notice, Setting, type SearchComponent, type WorkspaceLeaf } from "obsidian";
 import { buildQueue } from "../core";
 import { t } from "../i18n";
 import type RetrievaPlugin from "../main";
@@ -57,27 +57,44 @@ export class ScopeView extends ItemView {
     const refresh = (): void => {
       result.setText(tag ? this.count(tag) : t("scope.selectTag"));
     };
+    const tags = this.plugin.index.scopeTags();
+    let tagSearch: SearchComponent | null = null;
     new Setting(root).setName(t("scope.tag")).addSearch(search => {
+      tagSearch = search;
       search.setPlaceholder("flashcards/example").onChange(value => {
         tag = value.replace(/^#/, "").trim();
         refresh();
       });
-      const tags = [
-        ...new Set(
-          this.app.vault
-            .getMarkdownFiles()
-            .flatMap(file => {
-              const cache = this.app.metadataCache.getFileCache(file);
-              return cache ? (getAllTags(cache) ?? []) : [];
-            })
-            .map(value => value.replace(/^#/, "")),
-        ),
-      ];
       search.inputEl.setAttr("list", "retrieva-tags");
       const datalist = root.createEl("datalist");
       datalist.id = "retrieva-tags";
       tags.forEach(value => datalist.createEl("option", { value }));
     });
+    root.createEl(
+      "div",
+      { cls: "retrieva-tag-candidates", attr: { "aria-label": t("scope.cardTags") } },
+      candidates => {
+        candidates.createEl("small", {
+          cls: "retrieva-tag-candidates-label",
+          text: t("scope.cardTags"),
+        });
+        if (!tags.length) {
+          candidates.createEl("small", { text: t("scope.noCardTags") });
+          return;
+        }
+        for (const value of tags) {
+          const button = candidates.createEl("button", {
+            cls: "retrieva-tag-candidate",
+            text: `#${value}`,
+          });
+          button.onclick = () => {
+            tagSearch?.setValue(value);
+            tag = value;
+            refresh();
+          };
+        }
+      },
+    );
     new Setting(root).setName(t("scope.saveWithName")).addToggle(toggle =>
       toggle.onChange(value => {
         save = value;
