@@ -36,6 +36,11 @@ export const en = {
   "common.reload": "Reload",
   "common.validate": "Validate",
   "common.start": "Start",
+  "common.cancel": "Cancel",
+  "common.overwrite": "Overwrite",
+  "skills.confirmTitle": "Overwrite existing project skills?",
+  "skills.confirmDescription":
+    "The following Retrieva skill files contain different content. Overwriting will replace their entire contents.",
   "scope.choose": "Choose review scope",
   "scope.newTag": "New tag scope",
   "scope.selectTag": "Select one tag.",

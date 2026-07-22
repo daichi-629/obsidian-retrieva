@@ -38,6 +38,11 @@ export const ja = {
   "common.reload": "再読込",
   "common.validate": "検証",
   "common.start": "開始",
+  "common.cancel": "キャンセル",
+  "common.overwrite": "上書き",
+  "skills.confirmTitle": "既存のプロジェクトskillを上書きしますか？",
+  "skills.confirmDescription":
+    "次のRetrieva skillには異なる内容があります。上書きするとファイル全体が置き換わります。",
   "scope.choose": "復習範囲を選択",
   "scope.newTag": "新しいタグ範囲",
   "scope.selectTag": "タグを一つ選択してください。",

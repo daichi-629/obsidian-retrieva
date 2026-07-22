@@ -1,30 +1,25 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { PROJECT_SKILL_PATHS, installProjectSkills } from "../src/llm/skill-installer";
+import {
+  PROJECT_SKILL_PATHS,
+  installProjectSkills,
+  projectSkillConflicts,
+} from "../src/llm/skill-installer";
 
 class MemoryVault {
   files = new Map<string, string>();
   folders = new Set<string>();
-
-  getAbstractFileByPath(path: string) {
-    return this.folders.has(path) || this.files.has(path) ? { path } : null;
-  }
-  getFileByPath(path: string) {
-    return this.files.has(path) ? ({ path } as never) : null;
-  }
-  async createFolder(path: string) {
-    this.folders.add(path);
-  }
-  async create(path: string, content: string) {
-    this.files.set(path, content);
-    return { path } as never;
-  }
-  async read(file: { path: string }) {
-    return this.files.get(file.path) ?? "";
-  }
-  async modify(file: { path: string }, content: string) {
-    this.files.set(file.path, content);
-  }
+  adapter = {
+    exists: async (path: string) => this.folders.has(path) || this.files.has(path),
+    mkdir: async (path: string) => {
+      if (this.folders.has(path)) throw new Error("Folder already exists");
+      this.folders.add(path);
+    },
+    read: async (path: string) => this.files.get(path) ?? "",
+    write: async (path: string, content: string) => {
+      this.files.set(path, content);
+    },
+  };
 }
 
 describe("project skill installer", () => {
@@ -49,6 +44,22 @@ describe("project skill installer", () => {
     expect(await installProjectSkills(vault as never)).toEqual({
       [PROJECT_SKILL_PATHS[0]]: "updated",
       [PROJECT_SKILL_PATHS[1]]: "unchanged",
+    });
+  });
+
+  it("reports only existing skill files with different content", async () => {
+    await installProjectSkills(vault as never);
+    expect(await projectSkillConflicts(vault as never)).toEqual([]);
+    vault.files.set(PROJECT_SKILL_PATHS[1], "user customization");
+    expect(await projectSkillConflicts(vault as never)).toEqual([PROJECT_SKILL_PATHS[1]]);
+  });
+
+  it("uses the adapter when hidden parent folders already exist", async () => {
+    vault.folders.add(".agents");
+    vault.folders.add(".claude");
+    await expect(installProjectSkills(vault as never)).resolves.toEqual({
+      [PROJECT_SKILL_PATHS[0]]: "created",
+      [PROJECT_SKILL_PATHS[1]]: "created",
     });
   });
 });

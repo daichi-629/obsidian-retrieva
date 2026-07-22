@@ -5,8 +5,9 @@ import { CardRepository } from "./obsidian/card-repository";
 import { ObsidianFileAdapter } from "./obsidian/file-adapter";
 import { DEFAULT_SETTINGS, RetrievaSettingTab, SettingsStore } from "./settings";
 import { initializeI18n, t } from "./i18n";
-import { installProjectSkills } from "./llm/skill-installer";
+import { installProjectSkills, projectSkillConflicts } from "./llm/skill-installer";
 import { CreateCardModal } from "./ui/create-card-modal";
+import { ConfirmSkillOverwriteModal } from "./ui/confirm-skill-overwrite-modal";
 import { RecoveryView } from "./ui/recovery-view";
 import { ReviewView } from "./ui/review-view";
 import { ScopeView } from "./ui/scope-view";
@@ -258,6 +259,12 @@ export default class RetrievaPlugin extends Plugin {
   }
   private async installProjectSkills(): Promise<void> {
     try {
+      const conflicts = await projectSkillConflicts(this.app.vault);
+      if (
+        conflicts.length > 0 &&
+        !(await new ConfirmSkillOverwriteModal(this.app, conflicts).confirm())
+      )
+        return;
       const statuses = await installProjectSkills(this.app.vault);
       const changed = Object.values(statuses).filter(status => status !== "unchanged").length;
       new Notice(

@@ -8,11 +8,19 @@ export const PROJECT_SKILL_PATHS = [
 
 export type SkillInstallStatus = "created" | "updated" | "unchanged";
 
+export async function projectSkillConflicts(vault: Vault): Promise<string[]> {
+  const conflicts: string[] = [];
+  for (const path of PROJECT_SKILL_PATHS)
+    if ((await vault.adapter.exists(path)) && (await vault.adapter.read(path)) !== retrievaSkill)
+      conflicts.push(path);
+  return conflicts;
+}
+
 async function ensureFolder(vault: Vault, path: string): Promise<void> {
   let current = "";
   for (const segment of path.split("/")) {
     current = current ? `${current}/${segment}` : segment;
-    if (!vault.getAbstractFileByPath(current)) await vault.createFolder(current);
+    if (!(await vault.adapter.exists(current))) await vault.adapter.mkdir(current);
   }
 }
 
@@ -24,18 +32,17 @@ export async function installProjectSkills(
     const path = rawPath;
     const parent = path.split("/").slice(0, -1).join("/");
     await ensureFolder(vault, parent);
-    const existing = vault.getFileByPath(path);
-    if (!existing) {
-      await vault.create(path, retrievaSkill);
+    if (!(await vault.adapter.exists(path))) {
+      await vault.adapter.write(path, retrievaSkill);
       result[rawPath] = "created";
       continue;
     }
-    const current = await vault.read(existing);
+    const current = await vault.adapter.read(path);
     if (current === retrievaSkill) {
       result[rawPath] = "unchanged";
       continue;
     }
-    await vault.modify(existing, retrievaSkill);
+    await vault.adapter.write(path, retrievaSkill);
     result[rawPath] = "updated";
   }
   return result;
