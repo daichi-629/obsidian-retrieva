@@ -3,6 +3,7 @@ export * from "./card-initialization";
 export * from "./card-template";
 export * from "./date";
 export * from "./events";
+export * from "./excluded-directories";
 export * from "./id";
 export * from "./identifiers";
 export * from "./preset";

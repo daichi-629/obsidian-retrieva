@@ -1,6 +1,7 @@
 import type { App, Plugin } from "obsidian";
 import { PluginSettingTab, Setting } from "obsidian";
 import { t } from "./i18n";
+import { normalizeExcludedDirectories } from "./core";
 
 export interface SavedScope {
   name: string;
@@ -9,6 +10,7 @@ export interface SavedScope {
 export interface RetrievaSettings {
   savedScopes: SavedScope[];
   cardsFolder: string;
+  excludedDirectories: string[];
   showRibbonIcon: boolean;
   excludeNewSiblingsToday: boolean;
   excludeReviewSiblingsToday: boolean;
@@ -16,6 +18,7 @@ export interface RetrievaSettings {
 export const DEFAULT_SETTINGS: RetrievaSettings = {
   savedScopes: [],
   cardsFolder: "Cards",
+  excludedDirectories: [],
   showRibbonIcon: true,
   excludeNewSiblingsToday: true,
   excludeReviewSiblingsToday: true,
@@ -30,6 +33,9 @@ export class SettingsStore {
       ...DEFAULT_SETTINGS,
       ...(data ?? {}),
       savedScopes: Array.isArray(data?.savedScopes) ? data.savedScopes : [],
+      excludedDirectories: Array.isArray(data?.excludedDirectories)
+        ? normalizeExcludedDirectories(data.excludedDirectories)
+        : [],
     };
   }
   async save(): Promise<void> {
@@ -45,6 +51,7 @@ export class RetrievaSettingTab extends PluginSettingTab {
     private readonly openPreset: (path: string) => Promise<void>,
     private readonly presetPaths: () => string[],
     private readonly installProjectSkills: () => Promise<void>,
+    private readonly rebuildIndex: () => Promise<void>,
   ) {
     super(app, plugin);
   }
@@ -56,6 +63,21 @@ export class RetrievaSettingTab extends PluginSettingTab {
         await this.store.save();
       }),
     );
+    new Setting(this.containerEl)
+      .setName(t("settings.excludedDirectories"))
+      .setDesc(t("settings.excludedDirectoriesDescription"))
+      .addTextArea(text => {
+        text
+          .setPlaceholder("Archive\nTemplates")
+          .setValue(this.store.value.excludedDirectories.join("\n"))
+          .onChange(async value => {
+            this.store.value.excludedDirectories = normalizeExcludedDirectories(value.split("\n"));
+            await this.store.save();
+          });
+        text.inputEl.addEventListener("blur", () => {
+          void this.rebuildIndex();
+        });
+      });
     new Setting(this.containerEl).setName(t("settings.ribbon")).addToggle(toggle =>
       toggle.setValue(this.store.value.showRibbonIcon).onChange(async value => {
         this.store.value.showRibbonIcon = value;

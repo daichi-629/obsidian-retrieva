@@ -8,9 +8,11 @@ import {
   calculateAnswerCandidates,
   createReviewEvent,
   dueNow,
+  isPathExcluded,
   initializeCardMarkdown,
   parseCardMarkdown,
   parsePresetMarkdown,
+  normalizeExcludedDirectories,
   renderCardTemplate,
   sortAndRegenerateParents,
   undoLastReview,
@@ -119,6 +121,18 @@ describe("card Markdown", () => {
     const after = appendEvent(source, parsed, event);
     expect(after.includes("\r\n" + JSON.stringify(event) + "\r\n")).toBe(true);
     expect(after.endsWith("\n")).toBe(false);
+  });
+});
+
+describe("excluded directories", () => {
+  it("normalizes directory settings and respects path boundaries", () => {
+    expect(normalizeExcludedDirectories([" /Archive/ ", "Archive", "Drafts\\Old", ""])).toEqual([
+      "Archive",
+      "Drafts/Old",
+    ]);
+    expect(isPathExcluded("Archive/broken.md", ["Archive"])).toBe(true);
+    expect(isPathExcluded("Archive-old/card.md", ["Archive"])).toBe(false);
+    expect(isPathExcluded("Drafts/Old/card.md", ["Drafts\\Old"])).toBe(true);
   });
 });
 

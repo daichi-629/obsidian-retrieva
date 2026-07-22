@@ -5,6 +5,7 @@ import {
   IDENTIFIERS,
   initializeCardMarkdown,
   collectScopeTags,
+  isPathExcluded,
   parseCardMarkdown,
   parsePresetMarkdown,
   uuidv7,
@@ -33,7 +34,11 @@ export class CardIndex {
   constructor(
     private readonly plugin: Plugin,
     readonly files: ObsidianFileAdapter,
+    private readonly excludedDirectories: () => string[] = () => [],
   ) {}
+  isExcluded(path: string): boolean {
+    return isPathExcluded(path, this.excludedDirectories());
+  }
   onChange(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -52,7 +57,7 @@ export class CardIndex {
     this.invalid.clear();
     this.presets.clear();
     this.presetDefinitionIds.clear();
-    const files = this.files.listMarkdown();
+    const files = this.files.listMarkdown().filter(file => !this.isExcluded(file.path));
     const contents = await Promise.all(
       files.map(async file => [file, await this.files.read(file)] as const),
     );
@@ -149,6 +154,11 @@ export class CardIndex {
         this.parsed.delete(path);
         this.invalid.delete(path);
       }
+    if (this.isExcluded(file.path)) {
+      this.recomputeCards();
+      this.emit();
+      return;
+    }
     const isExistingPreset = [...this.presets.values()].some(
       preset => preset.sourcePath === file.path,
     );
@@ -179,7 +189,7 @@ export class CardIndex {
     this.cards.delete(path);
     this.parsed.delete(path);
     this.invalid.delete(path);
-    if (file)
+    if (file && !this.isExcluded(file.path))
       this.parseOne(file, await this.initializeIfNeeded(file, await this.files.readFresh(file)));
     this.recomputeCards();
     this.emit();

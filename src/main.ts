@@ -22,7 +22,7 @@ export default class RetrievaPlugin extends Plugin {
     this.settingsStore = new SettingsStore(this);
     await this.settingsStore.load();
     const files = new ObsidianFileAdapter(this);
-    this.index = new CardIndex(this, files);
+    this.index = new CardIndex(this, files, () => this.settingsStore.value.excludedDirectories);
     this.repository = new CardRepository(this.index);
     this.registerView(SCOPE_VIEW_TYPE, leaf => new ScopeView(leaf, this));
     this.registerView(REVIEW_VIEW_TYPE, leaf => new ReviewView(leaf, this));
@@ -90,6 +90,7 @@ export default class RetrievaPlugin extends Plugin {
         path => this.openFile(path),
         () => this.index.presetPaths(),
         () => this.installProjectSkills(),
+        () => this.index.rebuild(),
       ),
     );
     if (this.settingsStore.value.showRibbonIcon)
@@ -221,6 +222,7 @@ export default class RetrievaPlugin extends Plugin {
   private async validateVault(): Promise<void> {
     await this.index.rebuild();
     for (const file of this.app.vault.getMarkdownFiles()) {
+      if (this.index.isExcluded(file.path)) continue;
       const source = await this.index.files.read(file);
       if (
         !source.includes(MARKERS.answer) &&

@@ -83,9 +83,10 @@ export class ScopeView extends ItemView {
           return;
         }
         for (const value of tags) {
+          const count = this.plugin.index.cardsForTag(value).length;
           const button = candidates.createEl("button", {
             cls: "retrieva-tag-candidate",
-            text: `#${value}`,
+            text: t("scope.cardTagCount", { tag: value, count }),
           });
           button.onclick = () => {
             tagSearch?.setValue(value);

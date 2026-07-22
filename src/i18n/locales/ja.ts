@@ -21,6 +21,9 @@ export const ja = {
   "notice.skillsUnchanged": "Retrievaのプロジェクトskillは最新です。",
   "notice.skillsFailed": "プロジェクトskillを設定できませんでした: {{error}}",
   "settings.cardsFolder": "カードの既定フォルダ",
+  "settings.excludedDirectories": "除外ディレクトリ",
+  "settings.excludedDirectoriesDescription":
+    "Vault相対のディレクトリを1行に1件入力します。この中のカード、プリセット、破損markerをRetrievaは無視します。",
   "settings.ribbon": "リボンアイコンを表示",
   "settings.excludeNew": "新規の兄弟カードを当日除外",
   "settings.excludeReview": "復習の兄弟カードを当日除外",
@@ -48,6 +51,7 @@ export const ja = {
   "scope.selectTag": "タグを一つ選択してください。",
   "scope.tag": "タグ",
   "scope.cardTags": "Retrievaカードで使用中のタグ",
+  "scope.cardTagCount": "#{{tag}}（{{count}}件）",
   "scope.noCardTags": "Retrievaカードにデッキ用タグがありません。",
   "scope.saveWithName": "名前を付けて保存",
   "scope.name": "名前",

@@ -19,6 +19,9 @@ export const en = {
   "notice.skillsUnchanged": "Retrieva project skills are already up to date.",
   "notice.skillsFailed": "Could not install project skills: {{error}}",
   "settings.cardsFolder": "Default cards folder",
+  "settings.excludedDirectories": "Excluded directories",
+  "settings.excludedDirectoriesDescription":
+    "One vault-relative directory per line. Retrieva ignores cards, presets, and damaged markers inside these directories.",
   "settings.ribbon": "Show ribbon icon",
   "settings.excludeNew": "Exclude new siblings today",
   "settings.excludeReview": "Exclude review siblings today",
@@ -46,6 +49,7 @@ export const en = {
   "scope.selectTag": "Select one tag.",
   "scope.tag": "Tag",
   "scope.cardTags": "Tags used by Retrieva cards",
+  "scope.cardTagCount": "#{{tag}} ({{count}} cards)",
   "scope.noCardTags": "No deck tags were found on Retrieva cards.",
   "scope.saveWithName": "Save with a name",
   "scope.name": "Name",
