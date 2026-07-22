@@ -16,7 +16,7 @@ Retrieva is a Markdown-native spaced-repetition plugin for Obsidian. It schedule
 - Install a project-level skill that teaches Codex and Claude Code the card format.
 - Use the interface in English or Japanese.
 
-Retrieva supports desktop and mobile Obsidian. It requires Obsidian 1.6.0 or later.
+Retrieva supports desktop and mobile Obsidian. It requires Obsidian 1.13.0 or later.
 
 ## Installation
 
