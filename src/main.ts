@@ -5,6 +5,7 @@ import { CardRepository } from "./obsidian/card-repository";
 import { ObsidianFileAdapter } from "./obsidian/file-adapter";
 import { DEFAULT_SETTINGS, RetrievaSettingTab, SettingsStore } from "./settings";
 import { initializeI18n, t } from "./i18n";
+import { installProjectSkills } from "./llm/skill-installer";
 import { CreateCardModal } from "./ui/create-card-modal";
 import { RecoveryView } from "./ui/recovery-view";
 import { ReviewView } from "./ui/review-view";
@@ -73,6 +74,13 @@ export default class RetrievaPlugin extends Plugin {
       name: t("command.toggleSuspend"),
       checkCallback: checking => this.activeCardAction("toggle", checking),
     });
+    this.addCommand({
+      id: "install-project-skills",
+      name: t("command.installProjectSkills"),
+      callback: () => {
+        void this.installProjectSkills();
+      },
+    });
     this.addSettingTab(
       new RetrievaSettingTab(
         this.app,
@@ -80,6 +88,7 @@ export default class RetrievaPlugin extends Plugin {
         this.settingsStore,
         path => this.openFile(path),
         () => this.index.presetPaths(),
+        () => this.installProjectSkills(),
       ),
     );
     if (this.settingsStore.value.showRibbonIcon)
@@ -246,5 +255,18 @@ export default class RetrievaPlugin extends Plugin {
   }
   getCardState(cardId: string) {
     return [...this.index.cards.values()].find(card => card.cardId === cardId)?.state ?? null;
+  }
+  private async installProjectSkills(): Promise<void> {
+    try {
+      const statuses = await installProjectSkills(this.app.vault);
+      const changed = Object.values(statuses).filter(status => status !== "unchanged").length;
+      new Notice(
+        changed === 0
+          ? t("notice.skillsUnchanged")
+          : t("notice.skillsInstalled", { count: changed }),
+      );
+    } catch (error) {
+      new Notice(t("notice.skillsFailed", { error: String(error) }));
+    }
   }
 }

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "retrieva",
+  "description": "LLM tooling for the Retrieva Obsidian plugin.",
+  "owner": {
+    "name": "daichi-629"
+  },
+  "plugins": [
+    {
+      "name": "retrieva",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}

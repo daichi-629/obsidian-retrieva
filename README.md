@@ -11,6 +11,12 @@ Retrieva is a Markdown-native spaced-repetition plugin for Obsidian. Card conten
 
 Presets are ordinary Markdown files. On first load, Retrieva creates `Retrieva/Presets/default.md`. Edit that file to change FSRS retention, maximum interval, learning steps, relearning steps, or sibling exclusion.
 
+## LLM skill
+
+The bundled `retrieva` skill teaches Codex and Claude Code how to create source notes, cards, pairs, and presets without damaging review history. In Retrieva settings, press **Install / update** under **LLM project skills** to write it into both `.agents/skills/retrieva/SKILL.md` and `.claude/skills/retrieva/SKILL.md` in the current vault.
+
+This repository is also a directly loadable Codex and Claude Code plugin. Claude Code users can add the private repository as a marketplace and install `retrieva`; Codex users can install the repository as a plugin.
+
 ## Data and privacy
 
 Retrieva reads and writes only files in the current vault through the Obsidian Vault API. It makes no network requests, collects no telemetry, and stores no review state outside card Markdown. Plugin data contains only UI settings and saved tag shortcuts; deleting it does not delete card state.

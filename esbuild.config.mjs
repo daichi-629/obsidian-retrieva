@@ -9,6 +9,7 @@ const context = await esbuild.context({
   external: ["obsidian", "electron", ...builtins],
   format: "cjs",
   target: "es2022",
+  loader: { ".md": "text" },
   logLevel: "info",
   sourcemap: production ? false : "inline",
   treeShaking: true,

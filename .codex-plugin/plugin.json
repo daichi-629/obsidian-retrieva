@@ -1,0 +1,24 @@
+{
+  "name": "retrieva",
+  "version": "0.0.2",
+  "description": "Teach Codex how to create and safely edit Retrieva notes and cards.",
+  "author": {
+    "name": "daichi-629",
+    "url": "https://github.com/daichi-629"
+  },
+  "homepage": "https://github.com/daichi-629/obsidian-retrieva",
+  "repository": "https://github.com/daichi-629/obsidian-retrieva",
+  "license": "MIT",
+  "keywords": ["obsidian", "spaced-repetition", "fsrs"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Retrieva",
+    "shortDescription": "Create safe Retrieva notes and cards",
+    "longDescription": "Teaches Codex the Markdown formats and editing rules used by the Retrieva Obsidian plugin.",
+    "developerName": "daichi-629",
+    "category": "Productivity",
+    "capabilities": ["Write"],
+    "websiteURL": "https://github.com/daichi-629/obsidian-retrieva",
+    "defaultPrompt": ["Create Retrieva cards from these notes."]
+  }
+}

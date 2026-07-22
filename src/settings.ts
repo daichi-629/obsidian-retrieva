@@ -44,6 +44,7 @@ export class RetrievaSettingTab extends PluginSettingTab {
     private readonly store: SettingsStore,
     private readonly openPreset: (path: string) => Promise<void>,
     private readonly presetPaths: () => string[],
+    private readonly installProjectSkills: () => Promise<void>,
   ) {
     super(app, plugin);
   }
@@ -111,6 +112,20 @@ export class RetrievaSettingTab extends PluginSettingTab {
       new Setting(this.containerEl).setName(path).addButton(button =>
         button.setButtonText(t("common.open")).onClick(() => {
           void this.openPreset(path);
+        }),
+      );
+    this.containerEl.createEl("h3", { text: t("settings.llmSkills") });
+    new Setting(this.containerEl)
+      .setName(t("settings.installSkills"))
+      .setDesc(t("settings.installSkillsDescription"))
+      .addButton(button =>
+        button.setButtonText(t("settings.installSkillsButton")).onClick(async () => {
+          button.setDisabled(true);
+          try {
+            await this.installProjectSkills();
+          } finally {
+            button.setDisabled(false);
+          }
         }),
       );
   }

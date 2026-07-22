@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "retrieva",
+  "description": "Teach Claude Code how to create and safely edit Retrieva notes and cards.",
+  "version": "0.0.2",
+  "author": {
+    "name": "daichi-629",
+    "url": "https://github.com/daichi-629"
+  },
+  "homepage": "https://github.com/daichi-629/obsidian-retrieva",
+  "repository": "https://github.com/daichi-629/obsidian-retrieva",
+  "license": "MIT",
+  "keywords": ["obsidian", "spaced-repetition", "fsrs"],
+  "skills": "./skills/"
+}
