@@ -61,7 +61,7 @@ export class ScopeView extends ItemView {
     let tagSearch: SearchComponent | null = null;
     new Setting(root).setName(t("scope.tag")).addSearch(search => {
       tagSearch = search;
-      search.setPlaceholder("flashcards/example").onChange(value => {
+      search.setPlaceholder("Flashcards/example").onChange(value => {
         tag = value.replace(/^#/, "").trim();
         refresh();
       });
@@ -70,8 +70,7 @@ export class ScopeView extends ItemView {
       datalist.id = "retrieva-tags";
       tags.forEach(value => datalist.createEl("option", { value }));
     });
-    root.createEl(
-      "div",
+    root.createDiv(
       { cls: "retrieva-tag-candidates", attr: { "aria-label": t("scope.cardTags") } },
       candidates => {
         candidates.createEl("small", {

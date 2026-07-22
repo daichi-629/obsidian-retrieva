@@ -1,16 +1,15 @@
-import { ItemView, MarkdownRenderer, Notice, setIcon, type WorkspaceLeaf } from "obsidian";
+import { ItemView, MarkdownRenderer, Notice, type WorkspaceLeaf } from "obsidian";
 import {
   buildQueue,
   calculateAnswerCandidates,
   formatDue,
   RATINGS,
-  type CardState,
   type IndexedCard,
   type Rating,
 } from "../core";
 import type RetrievaPlugin from "../main";
 import { t } from "../i18n";
-import { RECOVERY_VIEW_TYPE, REVIEW_VIEW_TYPE } from "./view-types";
+import { RECOVERY_VIEW_TYPE, REVIEW_VIEW_TYPE, SUSPENDED_VIEW_TYPE } from "./view-types";
 
 interface UndoRecord {
   path: string;
@@ -24,6 +23,9 @@ export class ReviewView extends ItemView {
   private shownAnswer = false;
   private shownAt = Date.now();
   private undoRecord: UndoRecord | null = null;
+  private stateChanging = false;
+  private skipped = new Set<string>();
+  private skippedFinished = false;
   constructor(
     leaf: WorkspaceLeaf,
     private readonly plugin: RetrievaPlugin,
@@ -43,6 +45,8 @@ export class ReviewView extends ItemView {
     this.scopeName = name;
     this.tag = tag;
     this.current = null;
+    this.skipped.clear();
+    this.skippedFinished = false;
     void this.display();
   }
   override async onOpen(): Promise<void> {
@@ -60,12 +64,8 @@ export class ReviewView extends ItemView {
       new Date(),
     );
   }
-  private iconButton(parent: HTMLElement, icon: string, label: string, action: () => void): void {
-    const button = parent.createEl("button", {
-      cls: "clickable-icon",
-      attr: { "aria-label": label },
-    });
-    setIcon(button, icon);
+  private actionButton(parent: HTMLElement, label: string, action: () => void): void {
+    const button = parent.createEl("button", { text: label });
     button.onclick = action;
   }
   private async display(): Promise<void> {
@@ -73,24 +73,35 @@ export class ReviewView extends ItemView {
     root.empty();
     root.addClass("retrieva-view");
     const queue = this.queue();
+    const ready = queue.ready.filter(card => !this.skipped.has(card.path));
+    const skippedCount = queue.ready.length - ready.length;
+    const next = this.skippedFinished ? null : (ready[0] ?? null);
+    const refreshed = this.current ? this.plugin.index.cards.get(this.current.path) : undefined;
+    if (!this.current || !refreshed || refreshed.state.suspended) {
+      this.current = next;
+      this.shownAnswer = false;
+      this.shownAt = Date.now();
+    } else if (refreshed.lastEventId !== this.current.lastEventId) {
+      this.current = refreshed;
+      this.shownAnswer = false;
+      this.shownAt = Date.now();
+    } else this.current = refreshed;
     const toolbar = root.createDiv("retrieva-toolbar");
     toolbar.createEl("strong", {
-      text: `${queue.ready.length} / ${queue.totalValid} · ${this.scopeName}`,
+      text: `${ready.length} / ${queue.totalValid} · ${this.scopeName}`,
     });
-    const actions = toolbar.createDiv();
-    this.iconButton(actions, "undo-2", t("review.undo"), () => {
+    const actions = toolbar.createDiv("retrieva-toolbar-actions");
+    this.actionButton(actions, t("review.undo"), () => {
       void this.undo();
     });
+    this.actionButton(actions, t("review.openSuspended"), () => {
+      void this.plugin.activateView(SUSPENDED_VIEW_TYPE);
+    });
     if (this.current) {
-      this.iconButton(
-        actions,
-        this.current.state.suspended ? "play" : "pause",
-        this.current.state.suspended ? t("review.resume") : t("review.suspend"),
-        () => {
-          void this.toggleSuspend();
-        },
-      );
-      this.iconButton(actions, "file", t("review.openCard"), () => {
+      this.actionButton(actions, t("review.suspend"), () => {
+        void this.toggleSuspend();
+      });
+      this.actionButton(actions, t("review.openCard"), () => {
         void this.plugin.openFile(this.current!.path);
       });
     }
@@ -101,18 +112,22 @@ export class ReviewView extends ItemView {
         void this.plugin.activateView(RECOVERY_VIEW_TYPE);
       };
     }
-    const next = queue.ready[0] ?? null;
-    const refreshed = this.current ? this.plugin.index.cards.get(this.current.path) : undefined;
-    if (!this.current || !refreshed) {
-      this.current = next;
-      this.shownAnswer = false;
-      this.shownAt = Date.now();
-    } else if (refreshed.lastEventId !== this.current.lastEventId) {
-      this.current = refreshed;
-      this.shownAnswer = false;
-      this.shownAt = Date.now();
-    } else this.current = refreshed;
     if (!this.current) {
+      if (skippedCount > 0 && !this.skippedFinished) {
+        root.createEl("h2", { text: t("review.skipped", { count: skippedCount }) });
+        const skippedActions = root.createDiv("retrieva-skipped-actions");
+        this.actionButton(skippedActions, t("review.retrySkipped"), () => {
+          this.skipped.clear();
+          this.current = null;
+          void this.display();
+        });
+        this.actionButton(skippedActions, t("review.finishSkipped"), () => {
+          this.skippedFinished = true;
+          this.current = null;
+          void this.display();
+        });
+        return;
+      }
       root.createEl("h2", { text: t("review.complete") });
       if (queue.nextDue)
         root.createEl("p", {
@@ -133,6 +148,13 @@ export class ReviewView extends ItemView {
     }
     const card = root.createDiv("retrieva-card");
     await MarkdownRenderer.render(this.app, parsed.front, card, this.current.path, this);
+    const cardActions = root.createDiv("retrieva-card-actions");
+    this.actionButton(cardActions, t("review.skip"), () => {
+      this.skipped.add(this.current!.path);
+      this.current = null;
+      this.shownAnswer = false;
+      void this.display();
+    });
     if (this.current.state.suspended) {
       card.createEl("p", { text: t("review.suspended") });
       return;
@@ -214,20 +236,26 @@ export class ReviewView extends ItemView {
     await this.display();
   }
   private async toggleSuspend(): Promise<void> {
-    if (!this.current) return;
+    if (!this.current || this.stateChanging) return;
+    this.stateChanging = true;
     const card = this.current;
     const type = card.state.suspended ? "resume" : "suspend";
-    const result = await this.plugin.repository.stateChange(
-      card.path,
-      card.lastEventId,
-      type,
-      new Date(),
-      Intl.DateTimeFormat().resolvedOptions().timeZone,
-    );
-    if (result.status === "stale") {
-      new Notice(result.reason);
-      this.current = null;
-    } else this.current = this.plugin.index.cards.get(card.path) ?? null;
-    await this.display();
+    try {
+      const result = await this.plugin.repository.stateChange(
+        card.path,
+        card.lastEventId,
+        type,
+        new Date(),
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+      );
+      if (result.status === "stale") {
+        new Notice(result.reason);
+        this.current = null;
+      } else
+        this.current = type === "suspend" ? null : (this.plugin.index.cards.get(card.path) ?? null);
+      await this.display();
+    } finally {
+      this.stateChanging = false;
+    }
   }
 }

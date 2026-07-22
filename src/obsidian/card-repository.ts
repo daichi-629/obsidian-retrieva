@@ -168,10 +168,10 @@ export class CardRepository {
           state: { ...NEW_STATE },
         };
         const ordered = [created, ...parsed.events];
-        const events = ordered.map(
-          (event, index) =>
-            ({ ...event, parent: index === 0 ? null : ordered[index - 1]!.eid }) as CardEvent,
-        );
+        const events = ordered.map((event, index) => ({
+          ...event,
+          parent: index === 0 ? null : ordered[index - 1]!.eid,
+        }));
         const log = `${MARKERS.logStart}${parsed.newline}${events.map(event => JSON.stringify(event)).join(parsed.newline)}${parsed.newline}${MARKERS.logEnd}`;
         if (parsed.ranges.log)
           source = source.slice(0, parsed.ranges.log[0]) + log + source.slice(parsed.ranges.log[1]);

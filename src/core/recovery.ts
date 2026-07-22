@@ -20,10 +20,10 @@ export function sortAndRegenerateParents(events: CardEvent[]): CardEvent[] {
   const sorted = [...events].sort(
     (a, b) => Date.parse(a.at) - Date.parse(b.at) || a.eid.localeCompare(b.eid),
   );
-  return sorted.map(
-    (event, index) =>
-      ({ ...event, parent: index === 0 ? null : sorted[index - 1]!.eid }) as CardEvent,
-  );
+  return sorted.map((event, index) => ({
+    ...event,
+    parent: index === 0 ? null : sorted[index - 1]!.eid,
+  }));
 }
 export function validateRecovery(events: CardEvent[]): string[] {
   return validateLinearHistory(events).map(error => error.message);

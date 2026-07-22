@@ -14,5 +14,5 @@
     "useDefineForClassFields": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "esbuild.config.mjs"]
+  "include": ["src/**/*.ts", "tests/**/*.ts", "esbuild.config.mjs", "vitest.config.ts"]
 }

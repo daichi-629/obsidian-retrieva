@@ -2,15 +2,6 @@ import { Rating as FsrsRating, State, fsrs, generatorParameters, type Card } fro
 import { offsetDateTime } from "./date";
 import type { CardState, Preset, Rating } from "./types";
 
-const ratingMap: Record<
-  Rating,
-  FsrsRating.Again | FsrsRating.Hard | FsrsRating.Good | FsrsRating.Easy
-> = {
-  again: FsrsRating.Again,
-  hard: FsrsRating.Hard,
-  good: FsrsRating.Good,
-  easy: FsrsRating.Easy,
-};
 const stateMap: Record<CardState["phase"], State> = {
   new: State.New,
   learning: State.Learning,

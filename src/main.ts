@@ -11,7 +11,13 @@ import { ConfirmSkillOverwriteModal } from "./ui/confirm-skill-overwrite-modal";
 import { RecoveryView } from "./ui/recovery-view";
 import { ReviewView } from "./ui/review-view";
 import { ScopeView } from "./ui/scope-view";
-import { RECOVERY_VIEW_TYPE, REVIEW_VIEW_TYPE, SCOPE_VIEW_TYPE } from "./ui/view-types";
+import { SuspendedView } from "./ui/suspended-view";
+import {
+  RECOVERY_VIEW_TYPE,
+  REVIEW_VIEW_TYPE,
+  SCOPE_VIEW_TYPE,
+  SUSPENDED_VIEW_TYPE,
+} from "./ui/view-types";
 
 export default class RetrievaPlugin extends Plugin {
   settingsStore!: SettingsStore;
@@ -27,6 +33,7 @@ export default class RetrievaPlugin extends Plugin {
     this.registerView(SCOPE_VIEW_TYPE, leaf => new ScopeView(leaf, this));
     this.registerView(REVIEW_VIEW_TYPE, leaf => new ReviewView(leaf, this));
     this.registerView(RECOVERY_VIEW_TYPE, leaf => new RecoveryView(leaf, this));
+    this.registerView(SUSPENDED_VIEW_TYPE, leaf => new SuspendedView(leaf, this));
     await this.index.start();
     if (!this.index.presetDefinitionIds.has("default")) {
       await this.ensureDefaultPreset();
@@ -76,6 +83,13 @@ export default class RetrievaPlugin extends Plugin {
       checkCallback: checking => this.activeCardAction("toggle", checking),
     });
     this.addCommand({
+      id: "open-suspended-cards",
+      name: t("command.openSuspended"),
+      callback: () => {
+        void this.activateView(SUSPENDED_VIEW_TYPE);
+      },
+    });
+    this.addCommand({
       id: "install-project-skills",
       name: t("command.installProjectSkills"),
       callback: () => {
@@ -102,6 +116,7 @@ export default class RetrievaPlugin extends Plugin {
     void this.app.workspace.detachLeavesOfType(SCOPE_VIEW_TYPE);
     void this.app.workspace.detachLeavesOfType(REVIEW_VIEW_TYPE);
     void this.app.workspace.detachLeavesOfType(RECOVERY_VIEW_TYPE);
+    void this.app.workspace.detachLeavesOfType(SUSPENDED_VIEW_TYPE);
   }
   async activateView(type: string): Promise<void> {
     let leaf = this.app.workspace.getLeavesOfType(type)[0];
@@ -109,7 +124,7 @@ export default class RetrievaPlugin extends Plugin {
       leaf = this.app.workspace.getLeaf("tab");
       await leaf.setViewState({ type, active: true });
     }
-    await this.app.workspace.revealLeaf(leaf);
+    this.app.workspace.setActiveLeaf(leaf, { focus: true });
   }
   async openReview(name: string, tag: string): Promise<void> {
     await this.activateView(REVIEW_VIEW_TYPE);

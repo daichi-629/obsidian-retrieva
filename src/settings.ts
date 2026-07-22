@@ -68,7 +68,7 @@ export class RetrievaSettingTab extends PluginSettingTab {
       .setDesc(t("settings.excludedDirectoriesDescription"))
       .addTextArea(text => {
         text
-          .setPlaceholder("Archive\nTemplates")
+          .setPlaceholder("Archive\ntemplates")
           .setValue(this.store.value.excludedDirectories.join("\n"))
           .onChange(async value => {
             this.store.value.excludedDirectories = normalizeExcludedDirectories(value.split("\n"));
@@ -96,7 +96,7 @@ export class RetrievaSettingTab extends PluginSettingTab {
         await this.store.save();
       }),
     );
-    this.containerEl.createEl("h3", { text: t("settings.savedScopes") });
+    new Setting(this.containerEl).setName(t("settings.savedScopes")).setHeading();
     this.store.value.savedScopes.forEach((scope, index) => {
       new Setting(this.containerEl)
         .addText(text =>
@@ -129,14 +129,14 @@ export class RetrievaSettingTab extends PluginSettingTab {
         this.display();
       }),
     );
-    this.containerEl.createEl("h3", { text: t("settings.presets") });
+    new Setting(this.containerEl).setName(t("settings.presets")).setHeading();
     for (const path of this.presetPaths())
       new Setting(this.containerEl).setName(path).addButton(button =>
         button.setButtonText(t("common.open")).onClick(() => {
           void this.openPreset(path);
         }),
       );
-    this.containerEl.createEl("h3", { text: t("settings.llmSkills") });
+    new Setting(this.containerEl).setName(t("settings.llmSkills")).setHeading();
     new Setting(this.containerEl)
       .setName(t("settings.installSkills"))
       .setDesc(t("settings.installSkillsDescription"))

@@ -11,6 +11,7 @@ const context = await esbuild.context({
   target: "es2022",
   loader: { ".md": "text" },
   logLevel: "info",
+  minify: production,
   sourcemap: production ? false : "inline",
   treeShaking: true,
   outfile: "main.js",

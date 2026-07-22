@@ -1,5 +1,5 @@
-import type { EventRef, Plugin, TAbstractFile, TFile } from "obsidian";
-import { normalizePath } from "obsidian";
+import type { EventRef, Plugin, TAbstractFile } from "obsidian";
+import { normalizePath, TFile } from "obsidian";
 
 export class ObsidianFileAdapter {
   constructor(private readonly plugin: Plugin) {}
@@ -13,11 +13,11 @@ export class ObsidianFileAdapter {
     return this.plugin.app.vault.read(file);
   }
   async write(file: TFile, source: string): Promise<void> {
-    await this.plugin.app.vault.modify(file, source);
+    await this.plugin.app.vault.process(file, () => source);
   }
   get(path: string): TFile | null {
     const file = this.plugin.app.vault.getAbstractFileByPath(normalizePath(path));
-    return file && "extension" in file ? (file as TFile) : null;
+    return file instanceof TFile ? file : null;
   }
   async create(path: string, source: string): Promise<TFile> {
     const normalized = normalizePath(path);

@@ -1,25 +1,135 @@
 # Retrieva
 
-Retrieva is a Markdown-native spaced-repetition plugin for Obsidian. Card content stays in source notes; one Markdown file per card stores embed directions, a stable card ID, and a linear JSONL review history. The in-memory index can always be rebuilt from the vault.
+Retrieva is a Markdown-native spaced-repetition plugin for Obsidian. It schedules reviews with FSRS while keeping card content, identifiers, and review history in ordinary files inside your vault.
 
-## Use
+## Features
 
-1. Run **Retrieva: Create card** or **Create front/back card pair** from the command palette.
-2. Enter Obsidian embeds for the front and back, such as `![[Biology#Question]]`.
-3. Run **Retrieva: Open review scope picker**, choose one tag, and start reviewing.
-4. If a card is damaged after a merge or manual edit, run **Validate cards in vault** and repair its JSONL history in the recovery view.
+- Schedule new, learning, review, and relearning cards with FSRS.
+- Keep the question and answer in source notes by embedding headings or block IDs.
+- Rebuild all card state from Markdown without an external database.
+- Select review decks by tag, with card counts and nested-tag support.
+- Skip a card for the current session without changing its review history.
+- Manage long-term suspended cards in a dedicated view.
+- Create forward cards or linked front/back pairs from Obsidian commands.
+- Exclude vault directories from indexing and damaged-card detection.
+- Validate and repair malformed card metadata and linear JSONL review history.
+- Install a project-level skill that teaches Codex and Claude Code the card format.
+- Use the interface in English or Japanese.
 
-Presets are ordinary Markdown files. On first load, Retrieva creates `Retrieva/Presets/default.md`. Edit that file to change FSRS retention, maximum interval, learning steps, relearning steps, or sibling exclusion.
+Retrieva supports desktop and mobile Obsidian. It requires Obsidian 1.6.0 or later.
 
-## LLM skill
+## Installation
 
-The bundled `retrieva` skill teaches Codex and Claude Code how to create source notes, cards, pairs, and presets without damaging review history. In Retrieva settings, press **Install / update** under **LLM project skills** to write it into both `.agents/skills/retrieva/SKILL.md` and `.claude/skills/retrieva/SKILL.md` in the current vault.
+### Community plugins
 
-This repository is also a directly loadable Codex and Claude Code plugin. Claude Code users can add the private repository as a marketplace and install `retrieva`; Codex users can install the repository as a plugin.
+Once Retrieva is listed in the Obsidian Community directory:
+
+1. Open **Settings → Community plugins**.
+2. Select **Browse**, search for **Retrieva**, and install it.
+3. Enable **Retrieva**.
+
+### Manual installation
+
+Download `main.js`, `manifest.json`, and `styles.css` from the matching GitHub release and place them in:
+
+```text
+<Vault>/.obsidian/plugins/retrieva/
+```
+
+Reload Obsidian and enable Retrieva under **Community plugins**.
+
+## Quick start
+
+1. Run **Retrieva: Create card** from the command palette.
+2. Enter Obsidian embeds for the front and back, such as `![[Biology#Question]]` and `![[Biology#Answer]]`.
+3. Choose an existing FSRS preset and create the card.
+4. Run **Retrieva: Open review scope picker**.
+5. Select a tag and start reviewing.
+
+Use **Retrieva: Create front/back card pair** when both directions should be reviewed. Retrieva assigns the pair a shared sibling group so related cards can be kept out of the same review session.
+
+## Card format
+
+Each card is one Markdown file. User-owned content looks like this before Retrieva initializes it:
+
+```markdown
+---
+retrieva-preset: default
+tags:
+  - retrieva-card
+  - biology
+---
+
+![[Biology#Question]]
+
+<!--RETRIEVA-ANSWER-->
+
+![[Biology#Answer]]
+```
+
+When the plugin first indexes the card, it adds a UUIDv7 card ID and a `created` event. Later reviews append immutable JSONL events to the same file. Avoid manually changing `RETRIEVA-CARD` and `RETRIEVA-LOG` blocks; use the recovery view if machine metadata is damaged.
+
+Cards may live anywhere in the vault. The `retrieva-card` tag and a valid `retrieva-preset` reference identify them.
+
+## Review scopes
+
+The scope picker shows tags used by valid Retrieva cards and the number of cards included by each tag. Selecting a parent tag also includes cards under nested tags. Frequently used scopes can be saved with a display name.
+
+Queue counts show cards ready now and the total number of valid cards in the selected scope. Suspended and sibling-excluded cards remain outside the active queue.
+
+**Skip** moves a card out of the current pass without writing an event. After the remaining cards are reviewed, choose whether to retry the skipped cards or finish for today. **Suspend** is persistent and writes a state event; use **Retrieva: Open suspended cards** to open or resume suspended cards.
+
+## Presets
+
+On first load, Retrieva creates `Retrieva/Presets/default.md`. Presets are Markdown files with frontmatter for:
+
+- desired retention;
+- maximum interval in days;
+- learning and relearning steps;
+- same-day exclusion of new or reviewed sibling cards.
+
+Preset IDs must be unique. Cards that reference a missing or invalid preset appear in the recovery view.
+
+## Settings
+
+- **Default cards folder**: Where cards created by Retrieva commands are stored. This does not restrict cards created elsewhere.
+- **Excluded directories**: Vault-relative directories to ignore, one per line. Cards, presets, and damaged marker-like text inside these directories are not indexed or modified.
+- **Show ribbon icon**: Adds a shortcut for the review scope picker.
+- **Exclude new/review siblings today**: Overrides the corresponding preset behavior.
+- **Saved scopes**: Named tag shortcuts for review sessions.
+- **LLM project skills**: Installs or updates the bundled Retrieva skill for Codex and Claude Code.
+
+## Validation and recovery
+
+Run **Retrieva: Validate cards in vault** to find malformed markers, invalid JSONL rows, duplicate IDs, missing presets, and branched review history. The recovery view can open the affected file, generate missing initialization metadata, reissue duplicate card IDs, or sort events and regenerate their parent chain.
+
+Back up or version-control your vault before repairing manually edited review logs.
+
+## Codex and Claude Code skill
+
+In Retrieva settings, select **Install / update** under **LLM project skills**. The plugin writes the bundled skill to:
+
+```text
+.agents/skills/retrieva/SKILL.md
+.claude/skills/retrieva/SKILL.md
+```
+
+If an existing file differs, Retrieva asks before replacing it. The skill instructs an agent to follow the vault's card-location conventions, ask when the destination is unclear, preserve review history, and let Retrieva generate machine IDs.
+
+This repository also includes manifests for loading the same skill as a Codex or Claude Code plugin.
 
 ## Data and privacy
 
-Retrieva reads and writes only files in the current vault through the Obsidian Vault API. It makes no network requests, collects no telemetry, and stores no review state outside card Markdown. Plugin data contains only UI settings and saved tag shortcuts; deleting it does not delete card state.
+Retrieva:
+
+- reads and writes Markdown files only inside the current vault;
+- stores review state in card Markdown and UI settings through Obsidian's plugin data API;
+- writes the two hidden project-skill paths above only after an explicit user action;
+- makes no network requests;
+- collects no analytics or telemetry;
+- requires no account, payment, advertisement, or external service.
+
+Deleting Retrieva's plugin settings does not delete card history because the history remains in Markdown.
 
 ## Development
 
@@ -30,6 +140,10 @@ npm test
 npm run build
 ```
 
-The host-independent implementation is under `src/core`. Obsidian file and UI adapters live separately under `src/obsidian` and `src/ui`.
+The host-independent parser and scheduler integration live under `src/core`. Obsidian adapters and UI components live under `src/obsidian` and `src/ui`. User-facing strings are stored under `src/i18n/locales`, with English as the fallback locale.
 
-User-facing text is stored by locale under `src/i18n/locales`. English is the fallback when the current Obsidian language has no matching locale file.
+Releases use semantic version tags without a `v` prefix and attach `main.js`, `manifest.json`, `styles.css`, and a convenience ZIP archive.
+
+## License
+
+[MIT](LICENSE)
