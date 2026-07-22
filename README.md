@@ -123,6 +123,9 @@ This repository also includes manifests for loading the same skill as a Codex or
 Retrieva:
 
 - reads and writes Markdown files only inside the current vault;
+- enumerates Markdown files when a Retrieva view or card command first initializes the index, because cards may live anywhere in the vault;
+- reads those Markdown files to discover cards, presets, and damaged card markers, except beneath user-configured excluded directories;
+- does not enumerate non-Markdown files as part of card indexing;
 - stores review state in card Markdown and UI settings through Obsidian's plugin data API;
 - writes the two hidden project-skill paths above only after an explicit user action;
 - makes no network requests;
@@ -144,7 +147,7 @@ The host-independent parser and scheduler integration live under `src/core`. Obs
 
 The vault card index is initialized lazily when a Retrieva view or card command is first opened, keeping normal Obsidian startup lightweight.
 
-Releases use semantic version tags without a `v` prefix and attach `main.js`, `manifest.json`, `styles.css`, and a convenience ZIP archive.
+Releases use semantic version tags without a `v` prefix and attach only the three files supported by Obsidian: `main.js`, `manifest.json`, and `styles.css`. GitHub artifact attestations provide build provenance for these assets.
 
 ## License
 

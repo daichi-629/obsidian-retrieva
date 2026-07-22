@@ -1,4 +1,5 @@
 import type { App, Plugin } from "obsidian";
+import type { SettingDefinitionItem } from "obsidian";
 import { PluginSettingTab, Setting } from "obsidian";
 import { t } from "./i18n";
 import { normalizeExcludedDirectories } from "./core";
@@ -55,100 +56,137 @@ export class RetrievaSettingTab extends PluginSettingTab {
   ) {
     super(app, plugin);
   }
-  override display(): void {
-    this.containerEl.empty();
-    new Setting(this.containerEl).setName(t("settings.cardsFolder")).addText(text =>
-      text.setValue(this.store.value.cardsFolder).onChange(async value => {
-        this.store.value.cardsFolder = value.trim();
-        await this.store.save();
-      }),
-    );
-    new Setting(this.containerEl)
-      .setName(t("settings.excludedDirectories"))
-      .setDesc(t("settings.excludedDirectoriesDescription"))
-      .addTextArea(text => {
-        text
-          .setPlaceholder("Archive\ntemplates")
-          .setValue(this.store.value.excludedDirectories.join("\n"))
-          .onChange(async value => {
-            this.store.value.excludedDirectories = normalizeExcludedDirectories(value.split("\n"));
-            await this.store.save();
-          });
-        text.inputEl.addEventListener("blur", () => {
-          void this.rebuildIndex();
-        });
-      });
-    new Setting(this.containerEl).setName(t("settings.ribbon")).addToggle(toggle =>
-      toggle.setValue(this.store.value.showRibbonIcon).onChange(async value => {
-        this.store.value.showRibbonIcon = value;
-        await this.store.save();
-      }),
-    );
-    new Setting(this.containerEl).setName(t("settings.excludeNew")).addToggle(toggle =>
-      toggle.setValue(this.store.value.excludeNewSiblingsToday).onChange(async value => {
-        this.store.value.excludeNewSiblingsToday = value;
-        await this.store.save();
-      }),
-    );
-    new Setting(this.containerEl).setName(t("settings.excludeReview")).addToggle(toggle =>
-      toggle.setValue(this.store.value.excludeReviewSiblingsToday).onChange(async value => {
-        this.store.value.excludeReviewSiblingsToday = value;
-        await this.store.save();
-      }),
-    );
-    new Setting(this.containerEl).setName(t("settings.savedScopes")).setHeading();
-    this.store.value.savedScopes.forEach((scope, index) => {
-      new Setting(this.containerEl)
-        .addText(text =>
-          text.setValue(scope.name).onChange(async value => {
-            scope.name = value;
-            await this.store.save();
-          }),
-        )
-        .addText(text =>
-          text.setValue(scope.tag).onChange(async value => {
-            scope.tag = value.replace(/^#/, "");
-            await this.store.save();
-          }),
-        )
-        .addExtraButton(button =>
-          button
-            .setIcon("trash")
-            .setTooltip(t("settings.delete"))
-            .onClick(async () => {
-              this.store.value.savedScopes.splice(index, 1);
+  override getSettingDefinitions(): SettingDefinitionItem[] {
+    return [
+      {
+        name: t("settings.cardsFolder"),
+        render: setting => {
+          setting.addText(text =>
+            text.setValue(this.store.value.cardsFolder).onChange(async value => {
+              this.store.value.cardsFolder = value.trim();
               await this.store.save();
-              this.display();
             }),
+          );
+        },
+      },
+      {
+        name: t("settings.excludedDirectories"),
+        desc: t("settings.excludedDirectoriesDescription"),
+        render: setting => {
+          setting.addTextArea(text => {
+            text
+              .setPlaceholder("Archive\ntemplates")
+              .setValue(this.store.value.excludedDirectories.join("\n"))
+              .onChange(async value => {
+                this.store.value.excludedDirectories = normalizeExcludedDirectories(
+                  value.split("\n"),
+                );
+                await this.store.save();
+              });
+            text.inputEl.addEventListener("blur", () => void this.rebuildIndex());
+          });
+        },
+      },
+      this.toggleDefinition("settings.ribbon", "showRibbonIcon"),
+      this.toggleDefinition("settings.excludeNew", "excludeNewSiblingsToday"),
+      this.toggleDefinition("settings.excludeReview", "excludeReviewSiblingsToday"),
+      {
+        type: "group",
+        heading: t("settings.savedScopes"),
+        items: [
+          ...this.store.value.savedScopes.map((scope, index) => ({
+            name: scope.name || t("settings.newScope"),
+            render: (setting: Setting) => {
+              setting
+                .addText(text =>
+                  text.setValue(scope.name).onChange(async value => {
+                    scope.name = value;
+                    await this.store.save();
+                  }),
+                )
+                .addText(text =>
+                  text.setValue(scope.tag).onChange(async value => {
+                    scope.tag = value.replace(/^#/, "");
+                    await this.store.save();
+                  }),
+                )
+                .addExtraButton(button =>
+                  button
+                    .setIcon("trash")
+                    .setTooltip(t("settings.delete"))
+                    .onClick(async () => {
+                      this.store.value.savedScopes.splice(index, 1);
+                      await this.store.save();
+                      this.update();
+                    }),
+                );
+            },
+          })),
+          {
+            name: t("settings.addScope"),
+            render: setting => {
+              setting.addButton(button =>
+                button.setButtonText(t("settings.addScope")).onClick(async () => {
+                  this.store.value.savedScopes.push({ name: t("settings.newScope"), tag: "" });
+                  await this.store.save();
+                  this.update();
+                }),
+              );
+            },
+          },
+        ],
+      },
+      {
+        type: "group",
+        heading: t("settings.presets"),
+        items: this.presetPaths().map(path => ({
+          name: path,
+          render: (setting: Setting) => {
+            setting.addButton(button =>
+              button.setButtonText(t("common.open")).onClick(() => void this.openPreset(path)),
+            );
+          },
+        })),
+      },
+      {
+        type: "group",
+        heading: t("settings.llmSkills"),
+        items: [
+          {
+            name: t("settings.installSkills"),
+            desc: t("settings.installSkillsDescription"),
+            render: setting => {
+              setting.addButton(button =>
+                button.setButtonText(t("settings.installSkillsButton")).onClick(async () => {
+                  button.setDisabled(true);
+                  try {
+                    await this.installProjectSkills();
+                  } finally {
+                    button.setDisabled(false);
+                  }
+                }),
+              );
+            },
+          },
+        ],
+      },
+    ];
+  }
+
+  private toggleDefinition(
+    nameKey: "settings.ribbon" | "settings.excludeNew" | "settings.excludeReview",
+    key: "showRibbonIcon" | "excludeNewSiblingsToday" | "excludeReviewSiblingsToday",
+  ): SettingDefinitionItem {
+    return {
+      name: t(nameKey),
+      render: setting => {
+        setting.addToggle(toggle =>
+          toggle.setValue(this.store.value[key]).onChange(async value => {
+            this.store.value[key] = value;
+            await this.store.save();
+          }),
         );
-    });
-    new Setting(this.containerEl).addButton(button =>
-      button.setButtonText(t("settings.addScope")).onClick(async () => {
-        this.store.value.savedScopes.push({ name: t("settings.newScope"), tag: "" });
-        await this.store.save();
-        this.display();
-      }),
-    );
-    new Setting(this.containerEl).setName(t("settings.presets")).setHeading();
-    for (const path of this.presetPaths())
-      new Setting(this.containerEl).setName(path).addButton(button =>
-        button.setButtonText(t("common.open")).onClick(() => {
-          void this.openPreset(path);
-        }),
-      );
-    new Setting(this.containerEl).setName(t("settings.llmSkills")).setHeading();
-    new Setting(this.containerEl)
-      .setName(t("settings.installSkills"))
-      .setDesc(t("settings.installSkillsDescription"))
-      .addButton(button =>
-        button.setButtonText(t("settings.installSkillsButton")).onClick(async () => {
-          button.setDisabled(true);
-          try {
-            await this.installProjectSkills();
-          } finally {
-            button.setDisabled(false);
-          }
-        }),
-      );
+      },
+    };
   }
 }

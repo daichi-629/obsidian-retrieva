@@ -1,8 +1,8 @@
 {
   "id": "retrieva",
   "name": "Retrieva",
-  "version": "0.0.9",
-  "minAppVersion": "1.6.0",
+  "version": "0.0.10",
+  "minAppVersion": "1.13.0",
   "description": "Markdown-native spaced repetition with FSRS.",
   "author": "daichi-629",
   "isDesktopOnly": false
