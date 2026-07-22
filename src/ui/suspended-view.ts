@@ -21,6 +21,7 @@ export class SuspendedView extends ItemView {
     return "circle-pause";
   }
   override async onOpen(): Promise<void> {
+    await this.plugin.ensureIndexReady();
     this.register(this.plugin.index.onChange(() => this.display()));
     this.display();
   }

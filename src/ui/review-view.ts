@@ -50,6 +50,7 @@ export class ReviewView extends ItemView {
     void this.display();
   }
   override async onOpen(): Promise<void> {
+    await this.plugin.ensureIndexReady();
     this.register(
       this.plugin.index.onChange(() => {
         void this.display();

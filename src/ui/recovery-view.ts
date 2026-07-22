@@ -30,6 +30,7 @@ export class RecoveryView extends ItemView {
     return "wrench";
   }
   override async onOpen(): Promise<void> {
+    await this.plugin.ensureIndexReady();
     this.register(
       this.plugin.index.onChange(() => {
         void this.display();

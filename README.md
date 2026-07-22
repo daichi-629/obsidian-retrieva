@@ -142,6 +142,8 @@ npm run build
 
 The host-independent parser and scheduler integration live under `src/core`. Obsidian adapters and UI components live under `src/obsidian` and `src/ui`. User-facing strings are stored under `src/i18n/locales`, with English as the fallback locale.
 
+The vault card index is initialized lazily when a Retrieva view or card command is first opened, keeping normal Obsidian startup lightweight.
+
 Releases use semantic version tags without a `v` prefix and attach `main.js`, `manifest.json`, `styles.css`, and a convenience ZIP archive.
 
 ## License

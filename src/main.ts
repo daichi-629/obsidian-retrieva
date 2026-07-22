@@ -23,6 +23,7 @@ export default class RetrievaPlugin extends Plugin {
   settingsStore!: SettingsStore;
   index!: CardIndex;
   repository!: CardRepository;
+  private indexInitialization: Promise<void> | null = null;
   override async onload(): Promise<void> {
     await initializeI18n(moment.locale());
     this.settingsStore = new SettingsStore(this);
@@ -34,11 +35,6 @@ export default class RetrievaPlugin extends Plugin {
     this.registerView(REVIEW_VIEW_TYPE, leaf => new ReviewView(leaf, this));
     this.registerView(RECOVERY_VIEW_TYPE, leaf => new RecoveryView(leaf, this));
     this.registerView(SUSPENDED_VIEW_TYPE, leaf => new SuspendedView(leaf, this));
-    await this.index.start();
-    if (!this.index.presetDefinitionIds.has("default")) {
-      await this.ensureDefaultPreset();
-      await this.index.rebuild();
-    }
     this.addCommand({
       id: "open",
       name: t("command.open"),
@@ -49,17 +45,24 @@ export default class RetrievaPlugin extends Plugin {
     this.addCommand({
       id: "create-card",
       name: t("command.createCard"),
-      callback: () => new CreateCardModal(this, false).open(),
+      callback: async () => {
+        await this.ensureIndexReady();
+        new CreateCardModal(this, false).open();
+      },
     });
     this.addCommand({
       id: "create-card-pair",
       name: t("command.createPair"),
-      callback: () => new CreateCardModal(this, true).open(),
+      callback: async () => {
+        await this.ensureIndexReady();
+        new CreateCardModal(this, true).open();
+      },
     });
     this.addCommand({
       id: "rebuild-index",
       name: t("command.rebuild"),
       callback: async () => {
+        await this.ensureIndexReady();
         await this.index.rebuild();
         new Notice(t("notice.indexRebuilt"));
       },
@@ -68,6 +71,7 @@ export default class RetrievaPlugin extends Plugin {
       id: "validate-vault",
       name: t("command.validate"),
       callback: async () => {
+        await this.ensureIndexReady();
         await this.validateVault();
         await this.activateView(RECOVERY_VIEW_TYPE);
       },
@@ -104,7 +108,10 @@ export default class RetrievaPlugin extends Plugin {
         path => this.openFile(path),
         () => this.index.presetPaths(),
         () => this.installProjectSkills(),
-        () => this.index.rebuild(),
+        async () => {
+          await this.ensureIndexReady();
+          await this.index.rebuild();
+        },
       ),
     );
     if (this.settingsStore.value.showRibbonIcon)
@@ -119,6 +126,7 @@ export default class RetrievaPlugin extends Plugin {
     void this.app.workspace.detachLeavesOfType(SUSPENDED_VIEW_TYPE);
   }
   async activateView(type: string): Promise<void> {
+    await this.ensureIndexReady();
     let leaf = this.app.workspace.getLeavesOfType(type)[0];
     if (!leaf) {
       leaf = this.app.workspace.getLeaf("tab");
@@ -134,6 +142,17 @@ export default class RetrievaPlugin extends Plugin {
   async openFile(path: string): Promise<void> {
     const file = this.index.files.get(path);
     if (file) await this.app.workspace.getLeaf("tab").openFile(file);
+  }
+  async ensureIndexReady(): Promise<void> {
+    this.indexInitialization ??= this.initializeIndex();
+    await this.indexInitialization;
+  }
+  private async initializeIndex(): Promise<void> {
+    await this.index.start();
+    if (!this.index.presetDefinitionIds.has("default")) {
+      await this.ensureDefaultPreset();
+      await this.index.rebuild();
+    }
   }
   effectivePresets(): Map<string, Preset> {
     return new Map(
@@ -162,6 +181,7 @@ export default class RetrievaPlugin extends Plugin {
     presetId: string;
     pair: boolean;
   }): Promise<void> {
+    await this.ensureIndexReady();
     const folder = this.settingsStore.value.cardsFolder.replace(/^\/+|\/+$/g, "");
     const now = new Date();
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
