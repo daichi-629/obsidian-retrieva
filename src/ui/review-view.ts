@@ -72,6 +72,7 @@ export class ReviewView extends ItemView {
     const root = this.contentEl;
     root.empty();
     root.addClass("retrieva-view");
+    root.addClass("retrieva-review-view");
     const queue = this.queue();
     const ready = queue.ready.filter(card => !this.skipped.has(card.path));
     const skippedCount = queue.ready.length - ready.length;
@@ -112,10 +113,11 @@ export class ReviewView extends ItemView {
         void this.plugin.activateView(RECOVERY_VIEW_TYPE);
       };
     }
+    const content = root.createDiv("retrieva-review-content");
     if (!this.current) {
       if (skippedCount > 0 && !this.skippedFinished) {
-        root.createEl("h2", { text: t("review.skipped", { count: skippedCount }) });
-        const skippedActions = root.createDiv("retrieva-skipped-actions");
+        content.createEl("h2", { text: t("review.skipped", { count: skippedCount }) });
+        const skippedActions = content.createDiv("retrieva-skipped-actions");
         this.actionButton(skippedActions, t("review.retrySkipped"), () => {
           this.skipped.clear();
           this.current = null;
@@ -128,9 +130,9 @@ export class ReviewView extends ItemView {
         });
         return;
       }
-      root.createEl("h2", { text: t("review.complete") });
+      content.createEl("h2", { text: t("review.complete") });
       if (queue.nextDue)
-        root.createEl("p", {
+        content.createEl("p", {
           text: t("review.nextDue", {
             due:
               queue.nextDue.kind === "day"
@@ -146,9 +148,9 @@ export class ReviewView extends ItemView {
       this.current = null;
       return this.display();
     }
-    const card = root.createDiv("retrieva-card");
+    const card = content.createDiv("retrieva-card");
     await MarkdownRenderer.render(this.app, parsed.front, card, this.current.path, this);
-    const cardActions = root.createDiv("retrieva-card-actions");
+    const cardActions = content.createDiv("retrieva-card-actions");
     this.actionButton(cardActions, t("review.skip"), () => {
       this.skipped.add(this.current!.path);
       this.current = null;
