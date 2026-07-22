@@ -7,6 +7,7 @@ import {
   calculateAnswerCandidates,
   createReviewEvent,
   dueNow,
+  initializeCardMarkdown,
   parseCardMarkdown,
   parsePresetMarkdown,
   renderCardTemplate,
@@ -44,6 +45,26 @@ const cardSource = () =>
   });
 
 describe("card Markdown", () => {
+  it("initializes an LLM-authored card without requiring machine IDs", () => {
+    const draft = `---\n${IDENTIFIERS.presetKey}: default\ntags: [${IDENTIFIERS.cardTag}]\n---\n\nQ\n\n<!--RETRIEVA-ANSWER-->\n\nA\n`;
+    const initialized = initializeCardMarkdown(draft, {
+      cardId: "C1",
+      eventId: "E1",
+      now,
+      zone: "Asia/Tokyo",
+    });
+    expect(initialized).not.toBeNull();
+    const parsed = parseCardMarkdown("Cards/llm.md", initialized!);
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.cardId).toBe("C1");
+    expect(parsed.events[0]?.eid).toBe("E1");
+  });
+  it("does not auto-repair partial or malformed machine metadata", () => {
+    const draft = `---\n${IDENTIFIERS.presetKey}: default\ntags: [${IDENTIFIERS.cardTag}]\n---\n\nQ\n\n<!--RETRIEVA-ANSWER-->\n\nA\n`;
+    const input = { cardId: "C1", eventId: "E1", now, zone: "UTC" };
+    expect(initializeCardMarkdown(draft.replace("A\n", "A\n<!--RETRIEVA-LOG\n"), input)).toBeNull();
+    expect(initializeCardMarkdown(draft.replace("<!--RETRIEVA-ANSWER-->", ""), input)).toBeNull();
+  });
   it("round-trips all reconstructable state from one Markdown file", () => {
     const parsed = parseCardMarkdown("Cards/a.md", cardSource());
     expect(parsed.errors).toEqual([]);

@@ -3,8 +3,10 @@ import { debounce } from "obsidian";
 import {
   hasCardTag,
   IDENTIFIERS,
+  initializeCardMarkdown,
   parseCardMarkdown,
   parsePresetMarkdown,
+  uuidv7,
   type CardError,
   type IndexedCard,
   type ParsedCard,
@@ -53,6 +55,11 @@ export class CardIndex {
     const contents = await Promise.all(
       files.map(async file => [file, await this.files.read(file)] as const),
     );
+    for (let index = 0; index < contents.length; index++) {
+      const [file, source] = contents[index]!;
+      const initialized = await this.initializeIfNeeded(file, source);
+      if (initialized !== source) contents[index] = [file, initialized];
+    }
     const presetFiles = new Set<string>();
     const presetSources = new Map<string, string[]>();
     for (const [file, source] of contents) {
@@ -155,7 +162,7 @@ export class CardIndex {
       return;
     }
     if (current.extension === "md") {
-      const source = await this.files.read(current);
+      const source = await this.initializeIfNeeded(current, await this.files.read(current));
       if (isExistingPreset || parsePresetMarkdown(file.path, source).preset) {
         await this.rebuild();
         return;
@@ -171,7 +178,8 @@ export class CardIndex {
     this.cards.delete(path);
     this.parsed.delete(path);
     this.invalid.delete(path);
-    if (file) this.parseOne(file, await this.files.readFresh(file));
+    if (file)
+      this.parseOne(file, await this.initializeIfNeeded(file, await this.files.readFresh(file)));
     this.recomputeCards();
     this.emit();
   }
@@ -183,5 +191,17 @@ export class CardIndex {
   }
   presetPaths(): string[] {
     return [...this.presets.values()].map(preset => preset.sourcePath);
+  }
+  private async initializeIfNeeded(file: TFile, source: string): Promise<string> {
+    const now = new Date();
+    const initialized = initializeCardMarkdown(source, {
+      cardId: uuidv7(now.getTime()),
+      eventId: uuidv7(now.getTime() + 1),
+      now,
+      zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+    if (initialized === null) return source;
+    await this.files.write(file, initialized);
+    return initialized;
   }
 }

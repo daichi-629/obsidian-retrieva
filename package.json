@@ -1,6 +1,6 @@
 {
   "name": "obsidian-retrieva",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Markdown-native spaced repetition for Obsidian",
   "main": "main.js",
   "scripts": {

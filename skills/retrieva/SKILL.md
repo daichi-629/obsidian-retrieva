@@ -25,7 +25,7 @@ Card references can be `![[Note#Question]]` and `![[Note#Answer]]`. For paragrap
 
 ## Card files
 
-Create cards in the configured cards folder (the default is `Cards`). A valid card has exactly one answer marker, one card marker, and one log block:
+Create cards in the configured cards folder (the default is `Cards`). When an LLM creates a card, write only the user-owned frontmatter, front, answer marker, and back:
 
 ```markdown
 ---
@@ -40,32 +40,17 @@ tags:
 <!--RETRIEVA-ANSWER-->
 
 ![[Source note#Answer]]
-
-<!--RETRIEVA-CARD {"v":1,"id":"UUIDV7_CARD_ID"}-->
-
-<!--RETRIEVA-LOG
-{"v":1,"eid":"UUIDV7_EVENT_ID","type":"created","parent":null,"at":"RFC3339_OFFSET_DATETIME","zone":"IANA_TIME_ZONE","state":{"v":1,"phase":"new","due":null,"interval":0,"stability":null,"difficulty":null,"reps":0,"lapses":0,"learningStep":0,"suspended":false}}
-RETRIEVA-LOG-->
 ```
 
-When creating a card manually:
+Retrieva detects this uninitialized card the first time it reads it and adds the UUIDv7 card ID and created event itself. Do not generate or write `RETRIEVA-CARD` or `RETRIEVA-LOG` metadata.
 
-1. Generate distinct UUIDv7 values for the card `id` and created event `eid`.
-2. Use an RFC 3339 timestamp with an explicit UTC offset for `at`, and an IANA name such as `Asia/Tokyo` for `zone`.
-3. Keep each JSONL event on one physical line.
-4. Add `retrieva-card` to `tags`; additional topic tags are welcome.
-5. Use an existing `retrieva-preset` ID. Use `default` unless the project indicates another preset.
+When creating a card:
 
-For a forward/reverse pair, create two card files with swapped embeds, unique card/event IDs, and the same UUIDv7 sibling group in frontmatter:
+1. Add `retrieva-card` to `tags`; additional topic tags are welcome.
+2. Use an existing `retrieva-preset` ID. Use `default` unless the project indicates another preset.
+3. Include exactly one `<!--RETRIEVA-ANSWER-->` marker.
 
-```yaml
-retrieva-preset: default
-retrieva-sibling-group: UUIDV7_SHARED_GROUP_ID
-tags:
-  - retrieva-card
-```
-
-Do not infer sibling relationships from shared source notes. Only identical `retrieva-sibling-group` values make cards siblings.
+For a forward/reverse pair, use Retrieva's **Create front/back card pair** command so Retrieva can assign the machine IDs and shared sibling group. Do not invent a `retrieva-sibling-group`; cards created directly without one remain independent cards.
 
 ## Editing safety
 
