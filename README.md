@@ -18,6 +18,9 @@ Retrieva is a Markdown-native spaced-repetition plugin for Obsidian. It schedule
 
 Retrieva supports desktop and mobile Obsidian. It requires Obsidian 1.13.0 or later.
 
+Detailed usage instructions are available in the [English user guide](docs/user-guide.en.md)
+and [Japanese user guide](docs/user-guide.ja.md).
+
 ## Installation
 
 ### Community plugins
