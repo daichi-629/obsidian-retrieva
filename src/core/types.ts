@@ -38,7 +38,12 @@ export interface StateEvent extends BaseEvent {
   type: "suspend" | "resume" | "reset";
   scheduler: string;
 }
-export type CardEvent = CreatedEvent | ReviewEvent | StateEvent;
+export interface CheckpointEvent extends BaseEvent {
+  type: "checkpoint";
+  scheduler: string;
+  reviews: [at: string, rating: Rating][];
+}
+export type CardEvent = CreatedEvent | ReviewEvent | StateEvent | CheckpointEvent;
 
 export interface Preset {
   id: string;

@@ -1,11 +1,13 @@
 import {
   appendEvent,
   calculateAnswerCandidates,
+  compactLogIfNeeded,
   createReviewEvent,
   createStateEvent,
   IDENTIFIERS,
   MARKERS,
   NEW_STATE,
+  lastReviewAt,
   offsetDateTime,
   parseCardMarkdown,
   parsePresetMarkdown,
@@ -57,7 +59,12 @@ export class CardRepository {
       ).preset;
       if (!freshPreset || freshPreset.fingerprint !== expectedPresetFingerprint)
         return { status: "stale", reason: "Preset changed; answer choices were refreshed" };
-      const candidates = calculateAnswerCandidates(last.state, freshPreset, now, last.at);
+      const candidates = calculateAnswerCandidates(
+        last.state,
+        freshPreset,
+        now,
+        lastReviewAt(parsed.events),
+      );
       const eventId = uuidv7(now.getTime());
       const event = createReviewEvent({
         cardState: last.state,
@@ -69,7 +76,12 @@ export class CardRepository {
         zone,
         eventId,
       });
-      const sourceAfter = appendEvent(source, parsed, event);
+      const appended = appendEvent(source, parsed, event);
+      const sourceAfter = compactLogIfNeeded(appended, parseCardMarkdown(path, appended), {
+        now,
+        zone,
+        eventId: uuidv7(now.getTime() + 1),
+      });
       await this.index.files.write(file, sourceAfter);
       const verified = parseCardMarkdown(path, await this.index.files.readFresh(file));
       if (verified.events.at(-1)?.eid !== eventId || verified.errors.length)
@@ -95,7 +107,12 @@ export class CardRepository {
         return { status: "stale", reason: "Card history changed" };
       const eventId = uuidv7(now.getTime());
       const event = createStateEvent(type, last.state, last.eid, { now, zone, eventId });
-      const sourceAfter = appendEvent(source, parsed, event);
+      const appended = appendEvent(source, parsed, event);
+      const sourceAfter = compactLogIfNeeded(appended, parseCardMarkdown(path, appended), {
+        now,
+        zone,
+        eventId: uuidv7(now.getTime() + 1),
+      });
       await this.index.files.write(file, sourceAfter);
       await this.index.refresh(path);
       return { status: "written", eventId, sourceAfter };
@@ -146,7 +163,7 @@ export class CardRepository {
         }
         parsed = parseCardMarkdown(path, source);
       }
-      if (!parsed.events.some(event => event.type === "created")) {
+      if (!parsed.events.some(event => event.type === "created" || event.type === "checkpoint")) {
         if (
           parsed.errors.some(
             error =>

@@ -6,10 +6,12 @@ import {
   buildQueue,
   collectScopeTags,
   calculateAnswerCandidates,
+  compactEvents,
   createReviewEvent,
   dueNow,
   isPathExcluded,
   initializeCardMarkdown,
+  lastReviewAt,
   parseCardMarkdown,
   parsePresetMarkdown,
   normalizeExcludedDirectories,
@@ -174,6 +176,46 @@ describe("linear history", () => {
       ["E2", "E1"],
     ]);
     expect(validateLinearHistory(repaired)).toEqual([]);
+  });
+  it("compacts old events into a checkpoint with compact review history", () => {
+    const reviewState = {
+      ...NEW_STATE,
+      phase: "review" as const,
+      due: { kind: "day" as const, date: "2026-01-03" },
+      reps: 1,
+    };
+    const events: CardEvent[] = [
+      event("E1", null, "2026-01-01T00:00:00Z", "created"),
+      {
+        ...event("E2", "E1", "2026-01-02T00:00:00Z", "review"),
+        rating: "good",
+        state: reviewState,
+      } as CardEvent,
+      {
+        ...event("E3", "E2", "2026-01-02T00:01:00Z", "suspend"),
+        type: "suspend",
+        scheduler: "fsrs@1",
+        state: { ...reviewState, suspended: true },
+      },
+      {
+        ...event("E4", "E3", "2026-01-02T00:02:00Z", "resume"),
+        type: "resume",
+        scheduler: "fsrs@1",
+        state: reviewState,
+      },
+    ];
+    const compacted = compactEvents(events, { now, zone: "Asia/Tokyo", eventId: "CP1" }, 3, 1);
+    expect(compacted?.map(value => value.type)).toEqual(["checkpoint", "resume"]);
+    expect(compacted?.[0]).toMatchObject({
+      eid: "CP1",
+      parent: null,
+      type: "checkpoint",
+      reviews: [["2026-01-02T00:00:00Z", "good"]],
+      state: { suspended: true },
+    });
+    expect(compacted?.[1]?.parent).toBe("CP1");
+    expect(validateLinearHistory(compacted ?? [])).toEqual([]);
+    expect(lastReviewAt(compacted ?? [])).toBe("2026-01-02T00:00:00Z");
   });
 });
 

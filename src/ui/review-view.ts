@@ -3,6 +3,7 @@ import {
   buildQueue,
   calculateAnswerCandidates,
   formatDue,
+  lastReviewAt,
   RATINGS,
   type IndexedCard,
   type Rating,
@@ -177,7 +178,7 @@ export class ReviewView extends ItemView {
       this.current.state,
       preset,
       now,
-      this.current.events.at(-1)?.at,
+      lastReviewAt(this.current.events),
     );
     const ratings = root.createDiv("retrieva-ratings");
     for (const rating of RATINGS) {
