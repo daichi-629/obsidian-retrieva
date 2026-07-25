@@ -1,5 +1,5 @@
 import { moment, Notice, Plugin, normalizePath } from "obsidian";
-import { CardService, IDENTIFIERS, type Preset } from "./core";
+import { CardService, IDENTIFIERS, type CardFilter, type Preset } from "./core";
 import { CardIndex } from "./obsidian/card-index";
 import { ObsidianFileAdapter } from "./obsidian/file-adapter";
 import { DEFAULT_SETTINGS, RetrievaSettingTab, SettingsStore } from "./settings";
@@ -7,11 +7,13 @@ import { initializeI18n, t } from "./i18n";
 import { installProjectSkills, projectSkillConflicts } from "./llm/skill-installer";
 import { CreateCardModal } from "./ui/create-card-modal";
 import { ConfirmSkillOverwriteModal } from "./ui/confirm-skill-overwrite-modal";
+import { CardListView } from "./ui/card-list-view";
 import { RecoveryView } from "./ui/recovery-view";
 import { ReviewView } from "./ui/review-view";
 import { ScopeView } from "./ui/scope-view";
 import { SuspendedView } from "./ui/suspended-view";
 import {
+  CARD_LIST_VIEW_TYPE,
   RECOVERY_VIEW_TYPE,
   REVIEW_VIEW_TYPE,
   SCOPE_VIEW_TYPE,
@@ -38,6 +40,7 @@ export default class RetrievaPlugin extends Plugin {
     this.registerView(REVIEW_VIEW_TYPE, leaf => new ReviewView(leaf, this));
     this.registerView(RECOVERY_VIEW_TYPE, leaf => new RecoveryView(leaf, this));
     this.registerView(SUSPENDED_VIEW_TYPE, leaf => new SuspendedView(leaf, this));
+    this.registerView(CARD_LIST_VIEW_TYPE, leaf => new CardListView(leaf, this));
     this.addCommand({
       id: "open",
       name: t("command.open"),
@@ -127,6 +130,7 @@ export default class RetrievaPlugin extends Plugin {
     void this.app.workspace.detachLeavesOfType(REVIEW_VIEW_TYPE);
     void this.app.workspace.detachLeavesOfType(RECOVERY_VIEW_TYPE);
     void this.app.workspace.detachLeavesOfType(SUSPENDED_VIEW_TYPE);
+    void this.app.workspace.detachLeavesOfType(CARD_LIST_VIEW_TYPE);
   }
   async activateView(type: string): Promise<void> {
     await this.ensureIndexReady();
@@ -141,6 +145,11 @@ export default class RetrievaPlugin extends Plugin {
     await this.activateView(REVIEW_VIEW_TYPE);
     const view = this.app.workspace.getLeavesOfType(REVIEW_VIEW_TYPE)[0]?.view;
     if (view instanceof ReviewView) view.setScope(name, tag);
+  }
+  async openCardList(name: string, filter: CardFilter): Promise<void> {
+    await this.activateView(CARD_LIST_VIEW_TYPE);
+    const view = this.app.workspace.getLeavesOfType(CARD_LIST_VIEW_TYPE)[0]?.view;
+    if (view instanceof CardListView) view.setScope(name, filter);
   }
   async openFile(path: string): Promise<void> {
     const file = this.files.get(path);

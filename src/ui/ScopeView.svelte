@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Notice } from "obsidian";
-  import { buildQueue, buildTagTree } from "../core";
+  import { buildQueue, buildTagTree, tagFilter } from "../core";
   import { t } from "../i18n";
   import type RetrievaPlugin from "../main";
   import { RECOVERY_VIEW_TYPE, SUSPENDED_VIEW_TYPE } from "./view-types";
@@ -9,6 +9,7 @@
   interface Deck {
     name: string;
     tag: string;
+    deletable: boolean;
   }
 
   interface Props {
@@ -40,7 +41,10 @@
   function decks(): Deck[] {
     void refreshToken;
     const saved = plugin.settingsStore.value.savedScopes;
-    return [{ name: t("review.allCards"), tag: "" }, ...saved];
+    return [
+      { name: t("review.allCards"), tag: "", deletable: false },
+      ...saved.map(scope => ({ ...scope, deletable: true })),
+    ];
   }
 
   function allTags(): string[] {
@@ -63,6 +67,19 @@
 
   function openRecovery(): void {
     void plugin.activateView(RECOVERY_VIEW_TYPE);
+  }
+
+  function openCardList(deckName: string, deckTag: string): void {
+    void plugin.openCardList(deckName, tagFilter(deckTag));
+  }
+
+  async function deleteDeck(deck: Deck): Promise<void> {
+    const scopes = plugin.settingsStore.value.savedScopes;
+    const index = scopes.findIndex(scope => scope.tag === deck.tag && scope.name === deck.name);
+    if (index === -1) return;
+    scopes.splice(index, 1);
+    await plugin.settingsStore.save();
+    refreshToken += 1;
   }
 
   function openRecoveryOnKey(event: KeyboardEvent): void {
@@ -127,10 +144,18 @@
 {/if}
 <div class="retrieva-list">
   {#each decks() as deck (deck.tag + "::" + deck.name)}
-    <button class="retrieva-list-row" onclick={() => plugin.openReview(deck.name, deck.tag)}>
-      <span>{deck.name}</span>
-      <small>{count(deck.tag)}</small>
-    </button>
+    <div class="retrieva-list-row">
+      <button class="retrieva-list-row-main" onclick={() => plugin.openReview(deck.name, deck.tag)}>
+        <span>{deck.name}</span>
+        <small>{count(deck.tag)}</small>
+      </button>
+      <span class="retrieva-toolbar-actions">
+        <button onclick={() => openCardList(deck.name, deck.tag)}>{t("scope.cardList")}</button>
+        {#if deck.deletable}
+          <button onclick={() => deleteDeck(deck)}>{t("settings.delete")}</button>
+        {/if}
+      </span>
+    </div>
   {/each}
   <button class="retrieva-list-row retrieva-list-row-new" onclick={toggleNewDeck}>
     {creatingNew ? t("scope.closeNewDeck") : t("scope.newDeck")}
