@@ -99,16 +99,33 @@
 }
 .retrieva-tag-candidates {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: var(--size-4-2);
   margin-bottom: var(--size-4-4);
 }
-.retrieva-tag-candidate {
-  font-size: var(--font-ui-small);
-}
 .retrieva-tag-candidates-label {
-  flex-basis: 100%;
   color: var(--text-muted);
+}
+.retrieva-tag-tree,
+.retrieva-tag-tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-1);
+}
+.retrieva-tag-tree ul {
+  padding-left: var(--size-4-4);
+  margin-top: var(--size-4-1);
+}
+.retrieva-tag-node {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-4-2);
+  width: 100%;
+  font-size: var(--font-ui-small);
 }
 .retrieva-editor {
   width: 100%;

@@ -17,6 +17,8 @@ describe("i18n", () => {
   it("interpolates variables", async () => {
     await setLocale("en-US");
     expect(t("review.invalidBanner", { count: 3 })).toBe("3 cards have history or syntax problems");
-    expect(t("scope.cardTagCount", { tag: "science", count: 2 })).toBe("#science (2 cards)");
+    expect(t("notice.skillsInstalled", { count: 2 })).toBe(
+      "Installed or updated 2 Retrieva project skills.",
+    );
   });
 });

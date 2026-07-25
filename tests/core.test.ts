@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   IDENTIFIERS,
   buildQueue,
+  buildTagTree,
+  cardsMatching,
   collectScopeTags,
   calculateAnswerCandidates,
   isPathExcluded,
@@ -10,6 +12,7 @@ import {
   parsePresetMarkdown,
   normalizeExcludedDirectories,
   sortAndRegenerateParents,
+  tagFilter,
   validateLinearHistory,
   type CardEvent,
   type IndexedCard,
@@ -189,6 +192,42 @@ describe("scheduling and queues", () => {
       events: [],
     })) satisfies IndexedCard[];
     expect(collectScopeTags(cards)).toEqual(["alpha", "z/deck"]);
+  });
+  it("nests hierarchical tags under their implied parent segments", () => {
+    const tree = buildTagTree(["alpha", "science/basics", "science/chemistry"]);
+    expect(tree).toEqual([
+      { segment: "alpha", path: "alpha", children: [] },
+      {
+        segment: "science",
+        path: "science",
+        children: [
+          { segment: "basics", path: "science/basics", children: [] },
+          { segment: "chemistry", path: "science/chemistry", children: [] },
+        ],
+      },
+    ]);
+  });
+  it("matches a tag filter against exact tags and their sub-tags", () => {
+    const cards = ["alpha", "science/basics", "science/chemistry/organic"].map((tag, index) => ({
+      path: `${index}.md`,
+      cardId: `C${index}`,
+      presetId: "default",
+      siblingGroupId: null,
+      tags: [IDENTIFIERS.cardTag, tag],
+      state: { ...NEW_STATE },
+      lastEventId: `E${index}`,
+      createdAt: now.toISOString(),
+      events: [],
+    })) satisfies IndexedCard[];
+    expect(cardsMatching(cards, tagFilter("science")).map(card => card.path)).toEqual([
+      "1.md",
+      "2.md",
+    ]);
+    expect(cardsMatching(cards, tagFilter("")).map(card => card.path)).toEqual([
+      "0.md",
+      "1.md",
+      "2.md",
+    ]);
   });
   it("returns four FSRS outcomes with short-term instants", () => {
     const candidates = calculateAnswerCandidates(NEW_STATE, preset, now);

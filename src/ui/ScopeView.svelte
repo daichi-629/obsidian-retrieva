@@ -1,9 +1,10 @@
 <script lang="ts">
   import { Notice } from "obsidian";
-  import { buildQueue } from "../core";
+  import { buildQueue, buildTagTree } from "../core";
   import { t } from "../i18n";
   import type RetrievaPlugin from "../main";
-  import { SUSPENDED_VIEW_TYPE } from "./view-types";
+  import { RECOVERY_VIEW_TYPE, SUSPENDED_VIEW_TYPE } from "./view-types";
+  import TagTree from "./TagTree.svelte";
 
   interface Deck {
     name: string;
@@ -18,10 +19,13 @@
   let refreshToken = $state(0);
   let creatingNew = $state(false);
   let tag = $state("");
-  let save = $state(false);
   let name = $state("");
+  let nameEdited = $state(false);
 
   $effect(() => plugin.cards.onChange(() => (refreshToken += 1)));
+  $effect(() => {
+    if (!nameEdited) name = tag;
+  });
 
   function count(tagValue: string): string {
     void refreshToken;
@@ -36,13 +40,7 @@
   function decks(): Deck[] {
     void refreshToken;
     const saved = plugin.settingsStore.value.savedScopes;
-    const savedTags = new Set(saved.map(scope => scope.tag));
-    const tags = plugin.cards.scopeTags().filter(tagValue => !savedTags.has(tagValue));
-    return [
-      { name: t("review.allCards"), tag: "" },
-      ...saved,
-      ...tags.map(tagValue => ({ name: `#${tagValue}`, tag: tagValue })),
-    ];
+    return [{ name: t("review.allCards"), tag: "" }, ...saved];
   }
 
   function allTags(): string[] {
@@ -50,16 +48,33 @@
     return plugin.cards.scopeTags();
   }
 
+  function tagTree() {
+    return buildTagTree(allTags());
+  }
+
+  function invalidCount(): number {
+    void refreshToken;
+    return plugin.cards.invalidPaths().length;
+  }
+
   function openSuspended(): void {
     void plugin.activateView(SUSPENDED_VIEW_TYPE);
+  }
+
+  function openRecovery(): void {
+    void plugin.activateView(RECOVERY_VIEW_TYPE);
+  }
+
+  function openRecoveryOnKey(event: KeyboardEvent): void {
+    if (event.key === "Enter" || event.key === " ") openRecovery();
   }
 
   function toggleNewDeck(): void {
     creatingNew = !creatingNew;
     if (!creatingNew) {
       tag = "";
-      save = false;
       name = "";
+      nameEdited = false;
     }
   }
 
@@ -67,19 +82,31 @@
     tag = event.currentTarget.value.replace(/^#/, "").trim();
   }
 
-  async function submitNewDeck(): Promise<void> {
+  function onNameInput(event: Event & { currentTarget: HTMLInputElement }): void {
+    name = event.currentTarget.value;
+    nameEdited = true;
+  }
+
+  function selectTag(value: string): void {
+    tag = value;
+  }
+
+  async function saveNewDeck(): Promise<void> {
     if (!tag) {
       new Notice(t("scope.chooseFirst"));
       return;
     }
-    if (save && name) {
-      plugin.settingsStore.value.savedScopes.push({ name, tag });
-      await plugin.settingsStore.save();
+    if (!name) {
+      new Notice(t("scope.nameRequired"));
+      return;
     }
-    const finalName = name || `#${tag}`;
-    const finalTag = tag;
+    plugin.settingsStore.value.savedScopes.unshift({ name, tag });
+    await plugin.settingsStore.save();
+    refreshToken += 1;
     creatingNew = false;
-    await plugin.openReview(finalName, finalTag);
+    tag = "";
+    name = "";
+    nameEdited = false;
   }
 </script>
 
@@ -87,6 +114,17 @@
 <div class="retrieva-toolbar-actions">
   <button onclick={openSuspended}>{t("review.openSuspended")}</button>
 </div>
+{#if invalidCount()}
+  <div
+    class="retrieva-banner"
+    onclick={openRecovery}
+    onkeydown={openRecoveryOnKey}
+    role="button"
+    tabindex="0"
+  >
+    {t("review.invalidBanner", { count: invalidCount() })}
+  </div>
+{/if}
 <div class="retrieva-list">
   {#each decks() as deck (deck.tag + "::" + deck.name)}
     <button class="retrieva-list-row" onclick={() => plugin.openReview(deck.name, deck.tag)}>
@@ -122,24 +160,18 @@
     {#if allTags().length === 0}
       <small>{t("scope.noCardTags")}</small>
     {:else}
-      {#each allTags() as value (value)}
-        <button class="retrieva-tag-candidate" onclick={() => (tag = value)}>
-          {t("scope.cardTagCount", { tag: value, count: plugin.cards.cardsForTag(value).length })}
-        </button>
-      {/each}
+      <TagTree
+        nodes={tagTree()}
+        count={value => plugin.cards.cardsForTag(value).length}
+        onSelect={selectTag}
+      />
     {/if}
   </div>
   <div class="retrieva-form-row">
-    <label for="retrieva-save-toggle">{t("scope.saveWithName")}</label>
-    <input id="retrieva-save-toggle" type="checkbox" bind:checked={save} />
+    <label for="retrieva-name-input">{t("scope.name")}</label>
+    <input id="retrieva-name-input" type="text" value={name} oninput={onNameInput} />
   </div>
-  {#if save}
-    <div class="retrieva-form-row">
-      <label for="retrieva-name-input">{t("scope.name")}</label>
-      <input id="retrieva-name-input" type="text" bind:value={name} />
-    </div>
-  {/if}
   <div class="retrieva-form-row retrieva-form-row-end">
-    <button class="mod-cta" onclick={submitNewDeck}>{t("common.start")}</button>
+    <button class="mod-cta" onclick={saveNewDeck}>{t("common.save")}</button>
   </div>
 {/if}

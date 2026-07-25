@@ -5,13 +5,16 @@ import {
   hasMachineMarker,
   IDENTIFIERS,
   initializeCardMarkdown,
+  cardsMatching,
   collectScopeTags,
   isPathExcluded,
   parseCardMarkdown,
   parsePresetMarkdown,
+  tagFilter,
   uuidv7,
   type Cache,
   type CardError,
+  type CardFilter,
   type IndexedCard,
   type ParsedCard,
   type Preset,
@@ -233,10 +236,10 @@ export class CardIndex implements Cache {
     return [...this.cards.values()];
   }
   cardsForTag(tag: string): IndexedCard[] {
-    const clean = tag.replace(/^#/, "");
-    return [...this.cards.values()].filter(card =>
-      card.tags.some(value => value === clean || value.startsWith(`${clean}/`)),
-    );
+    return this.cardsMatching(tagFilter(tag));
+  }
+  cardsMatching(filter: CardFilter): IndexedCard[] {
+    return cardsMatching(this.cards.values(), filter);
   }
   scopeTags(): string[] {
     return collectScopeTags(this.cards.values());

@@ -1,3 +1,4 @@
+import type { CardFilter } from "./card-filter";
 import type { CardError, IndexedCard, ParsedCard, Preset } from "./types";
 
 export interface FileAdapter<FileRef = unknown> {
@@ -14,6 +15,7 @@ export interface Cache {
   getCard(path: string): IndexedCard | undefined;
   listCards(): IndexedCard[];
   cardsForTag(tag: string): IndexedCard[];
+  cardsMatching(filter: CardFilter): IndexedCard[];
   scopeTags(): string[];
   getParsed(path: string): ParsedCard | undefined;
   hasParsed(path: string): boolean;

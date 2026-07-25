@@ -5,6 +5,7 @@ import { parsePresetMarkdown } from "./preset";
 import { renderCardTemplate } from "./card-template";
 import { calculateAnswerCandidates } from "./scheduler";
 import { offsetDateTime } from "./date";
+import type { CardFilter } from "./card-filter";
 import type { Cache, FileAdapter } from "./ports";
 import { NEW_STATE, type CardEvent, type Rating } from "./types";
 import { uuidv7 } from "./id";
@@ -41,6 +42,9 @@ export class CardService {
   }
   cardsForTag(tag: string) {
     return this.cache.cardsForTag(tag);
+  }
+  cardsMatching(filter: CardFilter) {
+    return this.cache.cardsMatching(filter);
   }
   scopeTags() {
     return this.cache.scopeTags();

@@ -12,7 +12,6 @@
   } from "../core";
   import { t } from "../i18n";
   import type RetrievaPlugin from "../main";
-  import { RECOVERY_VIEW_TYPE } from "./view-types";
 
   interface UndoRecord {
     path: string;
@@ -82,10 +81,6 @@
 
   const parsed = $derived(current ? plugin.cards.getParsed(current.path) : undefined);
   const preset = $derived(current ? plugin.cards.getPreset(current.presetId) : undefined);
-  const invalidCount = $derived.by(() => {
-    void refreshToken;
-    return plugin.cards.invalidPaths().length;
-  });
   const answerContext = $derived.by(() => {
     if (!current || !preset || !shownAnswer) return null;
     const now = new Date();
@@ -150,14 +145,6 @@
   function openCard(): void {
     if (!current) return;
     void plugin.openFile(current.path);
-  }
-
-  function openRecovery(): void {
-    void plugin.activateView(RECOVERY_VIEW_TYPE);
-  }
-
-  function openRecoveryOnKey(event: KeyboardEvent): void {
-    if (event.key === "Enter" || event.key === " ") openRecovery();
   }
 
   function reveal(): void {
@@ -226,17 +213,6 @@
     {/if}
   </div>
 </div>
-{#if invalidCount}
-  <div
-    class="retrieva-banner"
-    onclick={openRecovery}
-    onkeydown={openRecoveryOnKey}
-    role="button"
-    tabindex="0"
-  >
-    {t("review.invalidBanner", { count: invalidCount })}
-  </div>
-{/if}
 {#if current && parsed && preset}
   <div class="retrieva-review-content">
     <div class="retrieva-card">
