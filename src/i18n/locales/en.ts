@@ -70,7 +70,7 @@ export const en = {
   "review.nextDue": "Next due: {{due}}",
   "review.suspended":
     "This card is suspended. Use the Resume button in the header to return it to the queue.",
-  "review.showAnswer": "Tap to show answer",
+  "review.showAnswer": "Show answer",
   "review.again": "Again",
   "review.hard": "Hard",
   "review.good": "Good",

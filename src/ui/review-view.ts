@@ -163,11 +163,11 @@ export class ReviewView extends ItemView {
       return;
     }
     if (!this.shownAnswer) {
-      card.createEl("p", { text: t("review.showAnswer"), cls: "mod-muted" });
-      card.onclick = () => {
+      const revealActions = content.createDiv("retrieva-reveal-actions");
+      this.actionButton(revealActions, t("review.showAnswer"), () => {
         this.shownAnswer = true;
         void this.display();
-      };
+      });
       return;
     }
     const answer = card.createDiv("retrieva-answer");

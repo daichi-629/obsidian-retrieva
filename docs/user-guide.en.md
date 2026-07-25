@@ -78,8 +78,8 @@ Enable “Save with a name” to open the same tag scope with one action next ti
 ### Answer a card
 
 1. Read the front of the card.
-2. Tap or select the card area to reveal the answer.
-3. Choose a rating at the bottom of the view.
+2. Select **Show answer** to reveal the answer.
+3. Choose a rating below the answer.
 
 There are four ratings. Each button also shows the next due time that would result from choosing it.
 

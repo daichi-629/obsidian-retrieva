@@ -1,5 +1,6 @@
 .retrieva-view {
   padding: var(--size-4-4);
+  box-sizing: border-box;
   height: 100%;
   overflow: auto;
 }
@@ -22,6 +23,7 @@
 }
 .retrieva-toolbar-actions,
 .retrieva-card-actions,
+.retrieva-reveal-actions,
 .retrieva-skipped-actions {
   display: flex;
   flex-wrap: wrap;
@@ -30,7 +32,6 @@
 .retrieva-card {
   min-height: 45vh;
   padding: var(--size-4-6) 0;
-  cursor: pointer;
 }
 .retrieva-answer {
   border-top: 1px solid var(--background-modifier-border);
@@ -90,7 +91,20 @@
   font-family: var(--font-monospace);
 }
 @media (max-width: 600px) {
+  .retrieva-review-view {
+    padding-bottom: calc(var(--safe-area-inset-bottom, 0px) + 4rem);
+  }
   .retrieva-ratings {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .retrieva-rating {
+    min-height: 3rem;
+    padding: var(--size-4-1);
+  }
+  .retrieva-rating span {
+    display: none;
+  }
+  .retrieva-rating small {
+    white-space: nowrap;
   }
 }

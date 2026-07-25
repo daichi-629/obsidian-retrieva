@@ -71,7 +71,7 @@ export const ja = {
   "review.complete": "本日の復習は完了しました",
   "review.nextDue": "次回予定: {{due}}",
   "review.suspended": "このカードは保留中です。ヘッダーの再開ボタンでキューへ戻せます。",
-  "review.showAnswer": "タップして答えを表示",
+  "review.showAnswer": "答えを表示",
   "review.again": "もう一度",
   "review.hard": "難しい",
   "review.good": "普通",
