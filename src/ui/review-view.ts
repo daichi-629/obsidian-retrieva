@@ -1,31 +1,14 @@
-import { ItemView, MarkdownRenderer, Notice, type WorkspaceLeaf } from "obsidian";
-import {
-  buildQueue,
-  calculateAnswerCandidates,
-  formatDue,
-  RATINGS,
-  type IndexedCard,
-  type Rating,
-} from "../core";
-import type RetrievaPlugin from "../main";
+import { ItemView, type WorkspaceLeaf } from "obsidian";
+import { mount, unmount } from "svelte";
 import { t } from "../i18n";
-import { RECOVERY_VIEW_TYPE, REVIEW_VIEW_TYPE, SUSPENDED_VIEW_TYPE } from "./view-types";
+import type RetrievaPlugin from "../main";
+import ReviewViewComponent from "./ReviewView.svelte";
+import { REVIEW_VIEW_TYPE } from "./view-types";
 
-interface UndoRecord {
-  path: string;
-  eventId: string;
-  sourceAfter: string;
-}
 export class ReviewView extends ItemView {
   scopeName = t("review.allCards");
   tag = "";
-  private current: IndexedCard | null = null;
-  private shownAnswer = false;
-  private shownAt = Date.now();
-  private undoRecord: UndoRecord | null = null;
-  private stateChanging = false;
-  private skipped = new Set<string>();
-  private skippedFinished = false;
+  private component: object | undefined;
   constructor(
     leaf: WorkspaceLeaf,
     private readonly plugin: RetrievaPlugin,
@@ -44,221 +27,31 @@ export class ReviewView extends ItemView {
   setScope(name: string, tag: string): void {
     this.scopeName = name;
     this.tag = tag;
-    this.current = null;
-    this.skipped.clear();
-    this.skippedFinished = false;
-    void this.display();
+    this.mountComponent();
   }
   override async onOpen(): Promise<void> {
     await this.plugin.ensureIndexReady();
-    this.register(
-      this.plugin.index.onChange(() => {
-        void this.display();
-      }),
-    );
-    await this.display();
+    this.mountComponent();
   }
-  private queue() {
-    return buildQueue(
-      this.plugin.index.cardsForTag(this.tag),
-      this.plugin.effectivePresets(),
-      new Date(),
-    );
+  override async onClose(): Promise<void> {
+    if (this.component) await unmount(this.component);
   }
-  private actionButton(parent: HTMLElement, label: string, action: () => void): void {
-    const button = parent.createEl("button", { text: label });
-    button.onclick = action;
-  }
-  private async display(): Promise<void> {
-    const root = this.contentEl;
-    root.empty();
-    root.addClass("retrieva-view");
-    root.addClass("retrieva-review-view");
-    const queue = this.queue();
-    const ready = queue.ready.filter(card => !this.skipped.has(card.path));
-    const skippedCount = queue.ready.length - ready.length;
-    const next = this.skippedFinished ? null : (ready[0] ?? null);
-    const refreshed = this.current ? this.plugin.index.cards.get(this.current.path) : undefined;
-    if (!this.current || !refreshed || refreshed.state.suspended) {
-      this.current = next;
-      this.shownAnswer = false;
-      this.shownAt = Date.now();
-    } else if (refreshed.lastEventId !== this.current.lastEventId) {
-      this.current = refreshed;
-      this.shownAnswer = false;
-      this.shownAt = Date.now();
-    } else this.current = refreshed;
-    const toolbar = root.createDiv("retrieva-toolbar");
-    toolbar.createEl("strong", {
-      text: `${ready.length} / ${queue.totalValid} · ${this.scopeName}`,
+  private mountComponent(): void {
+    if (this.component) {
+      void unmount(this.component);
+      this.component = undefined;
+    }
+    this.contentEl.empty();
+    this.contentEl.addClass("retrieva-view");
+    this.contentEl.addClass("retrieva-review-view");
+    this.component = mount(ReviewViewComponent, {
+      target: this.contentEl,
+      props: {
+        plugin: this.plugin,
+        view: this,
+        scopeName: this.scopeName,
+        tag: this.tag,
+      },
     });
-    const actions = toolbar.createDiv("retrieva-toolbar-actions");
-    this.actionButton(actions, t("review.undo"), () => {
-      void this.undo();
-    });
-    this.actionButton(actions, t("review.openSuspended"), () => {
-      void this.plugin.activateView(SUSPENDED_VIEW_TYPE);
-    });
-    if (this.current) {
-      this.actionButton(actions, t("review.suspend"), () => {
-        void this.toggleSuspend();
-      });
-      this.actionButton(actions, t("review.openCard"), () => {
-        void this.plugin.openFile(this.current!.path);
-      });
-    }
-    if (this.plugin.index.invalid.size) {
-      const banner = root.createDiv("retrieva-banner");
-      banner.setText(t("review.invalidBanner", { count: this.plugin.index.invalid.size }));
-      banner.onclick = () => {
-        void this.plugin.activateView(RECOVERY_VIEW_TYPE);
-      };
-    }
-    const content = root.createDiv("retrieva-review-content");
-    if (!this.current) {
-      if (skippedCount > 0 && !this.skippedFinished) {
-        content.createEl("h2", { text: t("review.skipped", { count: skippedCount }) });
-        const skippedActions = content.createDiv("retrieva-skipped-actions");
-        this.actionButton(skippedActions, t("review.retrySkipped"), () => {
-          this.skipped.clear();
-          this.current = null;
-          void this.display();
-        });
-        this.actionButton(skippedActions, t("review.finishSkipped"), () => {
-          this.skippedFinished = true;
-          this.current = null;
-          void this.display();
-        });
-        return;
-      }
-      content.createEl("h2", { text: t("review.complete") });
-      if (queue.nextDue)
-        content.createEl("p", {
-          text: t("review.nextDue", {
-            due:
-              queue.nextDue.kind === "day"
-                ? queue.nextDue.date
-                : new Date(queue.nextDue.at).toLocaleString(),
-          }),
-        });
-      return;
-    }
-    const parsed = this.plugin.index.parsed.get(this.current.path);
-    const preset = this.plugin.index.presets.get(this.current.presetId);
-    if (!parsed || !preset) {
-      this.current = null;
-      return this.display();
-    }
-    const card = content.createDiv("retrieva-card");
-    await MarkdownRenderer.render(this.app, parsed.front, card, this.current.path, this);
-    const cardActions = content.createDiv("retrieva-card-actions");
-    this.actionButton(cardActions, t("review.skip"), () => {
-      this.skipped.add(this.current!.path);
-      this.current = null;
-      this.shownAnswer = false;
-      void this.display();
-    });
-    if (this.current.state.suspended) {
-      card.createEl("p", { text: t("review.suspended") });
-      return;
-    }
-    if (!this.shownAnswer) {
-      const revealActions = content.createDiv("retrieva-reveal-actions");
-      this.actionButton(revealActions, t("review.showAnswer"), () => {
-        this.shownAnswer = true;
-        void this.display();
-      });
-      return;
-    }
-    const answer = card.createDiv("retrieva-answer");
-    await MarkdownRenderer.render(this.app, parsed.back, answer, this.current.path, this);
-    const now = new Date();
-    const candidates = calculateAnswerCandidates(
-      this.current.state,
-      preset,
-      now,
-      this.current.events.at(-1)?.at,
-    );
-    const ratings = root.createDiv("retrieva-ratings");
-    for (const rating of RATINGS) {
-      const button = ratings.createEl("button", { cls: `retrieva-rating retrieva-${rating}` });
-      button.createSpan({ text: t(`review.${rating}`) });
-      button.createEl("small", { text: formatDue(candidates[rating], now) });
-      button.onclick = () => {
-        void this.answer(rating, preset.fingerprint);
-      };
-    }
-  }
-  private async answer(rating: Rating, fingerprint: string): Promise<void> {
-    if (!this.current) return;
-    const card = this.current;
-    const result = await this.plugin.repository.review(
-      card.path,
-      card.lastEventId,
-      fingerprint,
-      rating,
-      Date.now() - this.shownAt,
-      new Date(),
-      Intl.DateTimeFormat().resolvedOptions().timeZone,
-    );
-    if (result.status === "stale") {
-      new Notice(result.reason);
-      this.current = null;
-      if (result.reason.startsWith("Preset")) await this.plugin.index.rebuild();
-      else await this.plugin.index.refresh(card.path);
-    } else {
-      this.undoRecord = {
-        path: card.path,
-        eventId: result.eventId,
-        sourceAfter: result.sourceAfter,
-      };
-      this.current = null;
-      this.shownAnswer = false;
-      this.shownAt = Date.now();
-    }
-    await this.display();
-  }
-  private async undo(): Promise<void> {
-    if (!this.undoRecord) {
-      new Notice(t("review.noUndo"));
-      return;
-    }
-    if (
-      !(await this.plugin.repository.undo(
-        this.undoRecord.path,
-        this.undoRecord.eventId,
-        this.undoRecord.sourceAfter,
-      ))
-    ) {
-      new Notice(t("review.undoUnavailable"));
-      this.undoRecord = null;
-      return;
-    }
-    this.undoRecord = null;
-    this.current = null;
-    await this.display();
-  }
-  private async toggleSuspend(): Promise<void> {
-    if (!this.current || this.stateChanging) return;
-    this.stateChanging = true;
-    const card = this.current;
-    const type = card.state.suspended ? "resume" : "suspend";
-    try {
-      const result = await this.plugin.repository.stateChange(
-        card.path,
-        card.lastEventId,
-        type,
-        new Date(),
-        Intl.DateTimeFormat().resolvedOptions().timeZone,
-      );
-      if (result.status === "stale") {
-        new Notice(result.reason);
-        this.current = null;
-      } else
-        this.current = type === "suspend" ? null : (this.plugin.index.cards.get(card.path) ?? null);
-      await this.display();
-    } finally {
-      this.stateChanging = false;
-    }
   }
 }

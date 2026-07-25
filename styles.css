@@ -22,8 +22,6 @@
   align-items: flex-start;
 }
 .retrieva-toolbar-actions,
-.retrieva-card-actions,
-.retrieva-reveal-actions,
 .retrieva-skipped-actions {
   display: flex;
   flex-wrap: wrap;
@@ -38,18 +36,30 @@
   margin-top: var(--size-4-6);
   padding-top: var(--size-4-4);
 }
-.retrieva-ratings {
+.retrieva-footer {
   flex: 0 0 auto;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(4.5rem, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: var(--size-4-2);
   padding-top: var(--size-4-2);
   background: var(--background-primary);
 }
-.retrieva-rating {
+.retrieva-card-actions,
+.retrieva-reveal-actions {
+  display: flex;
+  gap: var(--size-4-2);
+}
+.retrieva-ratings {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(4.5rem, 1fr));
+  gap: var(--size-4-2);
+}
+.retrieva-action {
   min-height: 4rem;
+  flex: 1;
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: center;
 }
 .retrieva-rating small {
@@ -72,6 +82,21 @@
   justify-content: space-between;
   gap: var(--size-4-2);
 }
+.retrieva-list-row-new {
+  justify-content: center;
+  color: var(--text-muted);
+  border: 1px dashed var(--background-modifier-border);
+}
+.retrieva-form-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-4-2);
+  padding: var(--size-4-2) 0;
+}
+.retrieva-form-row-end {
+  justify-content: flex-end;
+}
 .retrieva-tag-candidates {
   display: flex;
   flex-wrap: wrap;
@@ -92,12 +117,18 @@
 }
 @media (max-width: 600px) {
   .retrieva-review-view {
-    padding-bottom: calc(var(--safe-area-inset-bottom, 0px) + 4rem);
+    overflow: auto;
+  }
+  .retrieva-card {
+    min-height: auto;
+  }
+  .retrieva-footer {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 3.5rem);
   }
   .retrieva-ratings {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
-  .retrieva-rating {
+  .retrieva-action {
     min-height: 3rem;
     padding: var(--size-4-1);
   }

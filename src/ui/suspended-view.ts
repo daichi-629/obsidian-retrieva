@@ -1,10 +1,12 @@
-import { ItemView, Notice, Setting, type WorkspaceLeaf } from "obsidian";
-import { IDENTIFIERS } from "../core";
-import type RetrievaPlugin from "../main";
+import { ItemView, type WorkspaceLeaf } from "obsidian";
+import { mount, unmount } from "svelte";
 import { t } from "../i18n";
+import type RetrievaPlugin from "../main";
+import SuspendedViewComponent from "./SuspendedView.svelte";
 import { SUSPENDED_VIEW_TYPE } from "./view-types";
 
 export class SuspendedView extends ItemView {
+  private component: object | undefined;
   constructor(
     leaf: WorkspaceLeaf,
     private readonly plugin: RetrievaPlugin,
@@ -22,52 +24,13 @@ export class SuspendedView extends ItemView {
   }
   override async onOpen(): Promise<void> {
     await this.plugin.ensureIndexReady();
-    this.register(this.plugin.index.onChange(() => this.display()));
-    this.display();
+    this.contentEl.addClass("retrieva-view");
+    this.component = mount(SuspendedViewComponent, {
+      target: this.contentEl,
+      props: { plugin: this.plugin },
+    });
   }
-  private display(): void {
-    const root = this.contentEl;
-    root.empty();
-    root.addClass("retrieva-view");
-    root.createEl("h2", { text: t("suspended.title") });
-    const cards = [...this.plugin.index.cards.values()]
-      .filter(card => card.state.suspended)
-      .sort((left, right) => left.path.localeCompare(right.path));
-    if (!cards.length) {
-      root.createEl("p", { text: t("suspended.empty") });
-      return;
-    }
-    for (const card of cards)
-      new Setting(root)
-        .setName(card.path)
-        .setDesc(
-          card.tags
-            .filter(tag => tag !== IDENTIFIERS.cardTag)
-            .map(tag => `#${tag}`)
-            .join(" "),
-        )
-        .addButton(button =>
-          button.setButtonText(t("review.openCard")).onClick(() => {
-            void this.plugin.openFile(card.path);
-          }),
-        )
-        .addButton(button =>
-          button.setButtonText(t("review.resume")).onClick(async () => {
-            button.setDisabled(true);
-            try {
-              const result = await this.plugin.repository.stateChange(
-                card.path,
-                card.lastEventId,
-                "resume",
-                new Date(),
-                Intl.DateTimeFormat().resolvedOptions().timeZone,
-              );
-              if (result.status === "stale") new Notice(result.reason);
-              else new Notice(t("notice.cardResumed"));
-            } finally {
-              button.setDisabled(false);
-            }
-          }),
-        );
+  override async onClose(): Promise<void> {
+    if (this.component) await unmount(this.component);
   }
 }

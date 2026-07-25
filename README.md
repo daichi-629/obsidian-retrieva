@@ -140,10 +140,10 @@ Deleting Retrieva's plugin settings does not delete card history because the his
 ## Development
 
 ```sh
-npm install
-npm run format:check
-npm test
-npm run build
+pnpm install
+pnpm run format:check
+pnpm test
+pnpm run build
 ```
 
 The host-independent parser and scheduler integration live under `src/core`. Obsidian adapters and UI components live under `src/obsidian` and `src/ui`. User-facing strings are stored under `src/i18n/locales`, with English as the fallback locale.

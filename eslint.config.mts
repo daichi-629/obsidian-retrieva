@@ -1,6 +1,9 @@
 import obsidianmd from "eslint-plugin-obsidianmd";
 import globals from "globals";
 import { defineConfig, globalIgnores } from "eslint/config";
+import svelte from "eslint-plugin-svelte";
+import ts from "typescript-eslint";
+import svelteConfig from "./svelte.config.js";
 
 export default defineConfig(
   globalIgnores([
@@ -8,7 +11,6 @@ export default defineConfig(
     "main.js",
     "esbuild.config.mjs",
     "package.json",
-    "package-lock.json",
     "versions.json",
     "test-vault",
   ]),
@@ -25,6 +27,18 @@ export default defineConfig(
     },
   },
   ...obsidianmd.configs.recommended,
+  ...svelte.configs.recommended,
+  {
+    files: ["**/*.svelte", "**/*.svelte.ts"],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        extraFileExtensions: [".svelte"],
+        parser: ts.parser,
+        svelteConfig,
+      },
+    },
+  },
   {
     files: ["src/settings.ts", "src/ui/confirm-skill-overwrite-modal.ts"],
     rules: {

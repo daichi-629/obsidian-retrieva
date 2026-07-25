@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "allowJs": true,
     "baseUrl": ".",
     "inlineSourceMap": true,
     "inlineSources": true,
@@ -12,7 +13,16 @@
     "strict": true,
     "target": "ES2022",
     "useDefineForClassFields": true,
+    "verbatimModuleSyntax": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts", "esbuild.config.mjs", "vitest.config.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.svelte",
+    "tests/**/*.ts",
+    "scripts/**/*.ts",
+    "esbuild.config.mjs",
+    "svelte.config.js",
+    "vitest.config.ts"
+  ]
 }

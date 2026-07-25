@@ -46,6 +46,8 @@ export const en = {
   "skills.confirmDescription":
     "The following Retrieva skill files contain different content. Overwriting will replace their entire contents.",
   "scope.choose": "Choose review scope",
+  "scope.newDeck": "+ New deck",
+  "scope.closeNewDeck": "− Close",
   "scope.newTag": "New tag scope",
   "scope.selectTag": "Select one tag.",
   "scope.tag": "Tag",
