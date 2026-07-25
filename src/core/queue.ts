@@ -20,9 +20,16 @@ export function buildQueue(
   for (const card of cards) {
     if (!card.siblingGroupId) continue;
     for (const event of card.events) {
-      if (event.type !== "review" || !eventOccurredToday(event.at, now)) continue;
-      reviewedGroups.add(card.siblingGroupId);
-      reviewedToday.add(card.cardId);
+      const reviewed =
+        event.type === "review"
+          ? eventOccurredToday(event.at, now)
+          : event.type === "checkpoint"
+            ? event.reviews.some(([at]) => eventOccurredToday(at, now))
+            : false;
+      if (reviewed) {
+        reviewedGroups.add(card.siblingGroupId);
+        reviewedToday.add(card.cardId);
+      }
     }
   }
   const ready: IndexedCard[] = [],
