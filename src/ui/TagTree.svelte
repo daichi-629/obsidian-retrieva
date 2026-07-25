@@ -4,7 +4,9 @@
 
   interface Props {
     nodes: TagTreeNode[];
+    // eslint-disable-next-line no-unused-vars -- parameter name in a type signature, not a binding
     count: (tag: string) => number;
+    // eslint-disable-next-line no-unused-vars -- parameter name in a type signature, not a binding
     onSelect: (tag: string) => void;
   }
   const { nodes, count, onSelect }: Props = $props();

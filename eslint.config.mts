@@ -40,7 +40,11 @@ export default defineConfig(
     },
   },
   {
-    files: ["src/settings.ts", "src/ui/confirm-skill-overwrite-modal.ts"],
+    files: [
+      "src/settings.ts",
+      "src/ui/confirm-skill-overwrite-modal.ts",
+      "src/ui/confirm-modal.ts",
+    ],
     rules: {
       "@typescript-eslint/no-deprecated": "off",
     },
