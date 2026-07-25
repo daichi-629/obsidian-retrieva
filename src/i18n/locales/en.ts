@@ -59,6 +59,7 @@ export const en = {
   "scope.chooseFirst": "Choose a tag first.",
   "scope.nameRequired": "Enter a name.",
   "scope.cardList": "Card list",
+  "scope.confirmDelete": 'Delete deck "{{name}}"?',
   "cardList.empty": "No cards in this deck.",
   "cardList.suspended": "Suspended",
   "review.allCards": "All cards",

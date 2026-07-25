@@ -61,6 +61,7 @@ export const ja = {
   "scope.chooseFirst": "先にタグを選択してください。",
   "scope.nameRequired": "名前を入力してください。",
   "scope.cardList": "カード一覧",
+  "scope.confirmDelete": "デッキ「{{name}}」を削除しますか？",
   "cardList.empty": "このデッキにカードはありません。",
   "cardList.suspended": "保留中",
   "review.allCards": "すべてのカード",

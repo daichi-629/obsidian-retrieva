@@ -3,6 +3,7 @@
   import { buildQueue, buildTagTree, tagFilter } from "../core";
   import { t } from "../i18n";
   import type RetrievaPlugin from "../main";
+  import { ConfirmModal } from "./confirm-modal";
   import { RECOVERY_VIEW_TYPE, SUSPENDED_VIEW_TYPE } from "./view-types";
   import TagTree from "./TagTree.svelte";
 
@@ -74,6 +75,11 @@
   }
 
   async function deleteDeck(deck: Deck): Promise<void> {
+    const confirmed = await new ConfirmModal(
+      plugin.app,
+      t("scope.confirmDelete", { name: deck.name }),
+    ).confirm();
+    if (!confirmed) return;
     const scopes = plugin.settingsStore.value.savedScopes;
     const index = scopes.findIndex(scope => scope.tag === deck.tag && scope.name === deck.name);
     if (index === -1) return;
