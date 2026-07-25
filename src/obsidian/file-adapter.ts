@@ -1,7 +1,8 @@
 import type { EventRef, Plugin, TAbstractFile } from "obsidian";
 import { normalizePath, TFile } from "obsidian";
+import type { FileAdapter } from "../core";
 
-export class ObsidianFileAdapter {
+export class ObsidianFileAdapter implements FileAdapter<TFile> {
   constructor(private readonly plugin: Plugin) {}
   listMarkdown(): TFile[] {
     return this.plugin.app.vault.getMarkdownFiles();

@@ -36,7 +36,7 @@ export class CreateCardModal extends Modal {
       }),
     );
     new Setting(this.contentEl).setName(t("create.preset")).addDropdown(dropdown => {
-      for (const preset of this.retrieva.index.presets.values())
+      for (const [, preset] of this.retrieva.cards.presetEntries())
         dropdown.addOption(preset.id, preset.id);
       dropdown.setValue(this.presetId).onChange(value => {
         this.presetId = value;
@@ -51,7 +51,7 @@ export class CreateCardModal extends Modal {
             !this.front ||
             !this.back ||
             !this.filename ||
-            !this.retrieva.index.presets.has(this.presetId)
+            !this.retrieva.cards.getPreset(this.presetId)
           ) {
             new Notice(t("create.required"));
             return;

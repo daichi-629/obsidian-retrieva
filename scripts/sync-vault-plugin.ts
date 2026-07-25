@@ -1,6 +1,6 @@
 import { copyFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import { PLUGIN_ID } from "../src/core";
+import { PLUGIN_ID } from "../src/core/identifiers";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const PLUGIN_DIR = path.join(ROOT, "test-vault/.obsidian/plugins", PLUGIN_ID);

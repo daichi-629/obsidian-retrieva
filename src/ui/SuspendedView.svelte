@@ -13,11 +13,12 @@
   let refreshToken = $state(0);
   const resuming = new SvelteSet<string>();
 
-  $effect(() => plugin.index.onChange(() => (refreshToken += 1)));
+  $effect(() => plugin.cards.onChange(() => (refreshToken += 1)));
 
   const cards = $derived.by(() => {
     void refreshToken;
-    return [...plugin.index.cards.values()]
+    return plugin.cards
+      .listCards()
       .filter(card => card.state.suspended)
       .sort((left, right) => left.path.localeCompare(right.path));
   });
@@ -36,7 +37,7 @@
   async function resume(path: string, lastEventId: string): Promise<void> {
     resuming.add(path);
     try {
-      const result = await plugin.repository.stateChange(
+      const result = await plugin.cards.stateChange(
         path,
         lastEventId,
         "resume",

@@ -1,8 +1,6 @@
 <script lang="ts">
   import { Notice } from "obsidian";
   import {
-    MARKERS,
-    parseCardMarkdown,
     parseEvent,
     sortAndRegenerateParents,
     validateLinearHistory,
@@ -20,27 +18,24 @@
   let selectedPath = $state<string | null>(null);
   let draft = $state("");
 
-  $effect(() => plugin.index.onChange(() => (refreshToken += 1)));
+  $effect(() => plugin.cards.onChange(() => (refreshToken += 1)));
 
   const paths = $derived.by(() => {
     void refreshToken;
-    return [...plugin.index.invalid.keys()].sort();
+    return plugin.cards.invalidPaths().sort();
   });
   const errors = $derived.by(() => {
     void refreshToken;
-    return selectedPath ? (plugin.index.invalid.get(selectedPath) ?? []) : [];
+    return selectedPath ? plugin.cards.invalidErrors(selectedPath) : [];
   });
   const hasParsed = $derived.by(() => {
     void refreshToken;
-    return selectedPath ? plugin.index.parsed.has(selectedPath) : false;
+    return selectedPath ? plugin.cards.hasParsed(selectedPath) : false;
   });
 
   async function loadDraft(): Promise<void> {
     if (!selectedPath) return;
-    const file = plugin.index.files.get(selectedPath);
-    if (!file) return;
-    const parsed = parseCardMarkdown(file.path, await plugin.index.files.readFresh(file));
-    draft = parsed.rawEventLines.join("\n");
+    draft = (await plugin.cards.loadRawLog(selectedPath)) ?? "";
   }
 
   function onSelectChange(event: Event & { currentTarget: HTMLSelectElement }): void {
@@ -56,7 +51,7 @@
   async function repair(reissue: boolean): Promise<void> {
     if (!selectedPath) return;
     try {
-      await plugin.repository.repairMetadata(selectedPath, reissue);
+      await plugin.cards.repairMetadata(selectedPath, reissue);
       await loadDraft();
     } catch (error) {
       new Notice(String(error));
@@ -111,21 +106,13 @@
       new Notice(validationErrors.map(error => error.message).join("\n"));
       return;
     }
-    const file = plugin.index.files.get(selectedPath);
-    if (!file) return;
-    const source = await plugin.index.files.readFresh(file);
-    const parsed = parseCardMarkdown(file.path, source);
-    const start = source.indexOf(MARKERS.logStart);
-    const end = source.indexOf(MARKERS.logEnd, start + MARKERS.logStart.length);
-    if (start < 0 || end < 0) {
+    const result = await plugin.cards.saveRawLog(selectedPath, events);
+    if (result === "not-found") return;
+    if (result === "missing-markers") {
       new Notice(t("recovery.fixMarkers"));
       return;
     }
-    const replacement = `${MARKERS.logStart}${parsed.newline}${events.map(event => JSON.stringify(event)).join(parsed.newline)}${parsed.newline}`;
-    const repaired = source.slice(0, start) + replacement + source.slice(end);
-    await plugin.index.files.write(file, repaired);
-    await plugin.index.refresh(file.path);
-    if (plugin.index.invalid.has(file.path)) new Notice(t("recovery.stillInvalid"));
+    if (result === "still-invalid") new Notice(t("recovery.stillInvalid"));
     else {
       new Notice(t("recovery.repaired"));
       selectedPath = null;

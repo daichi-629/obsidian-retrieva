@@ -1,26 +1,24 @@
 import { describe, expect, it } from "vitest";
 import {
   IDENTIFIERS,
-  NEW_STATE,
-  appendEvent,
   buildQueue,
   collectScopeTags,
   calculateAnswerCandidates,
-  createReviewEvent,
-  dueNow,
   isPathExcluded,
   initializeCardMarkdown,
   parseCardMarkdown,
   parsePresetMarkdown,
   normalizeExcludedDirectories,
-  renderCardTemplate,
   sortAndRegenerateParents,
-  undoLastReview,
   validateLinearHistory,
   type CardEvent,
   type IndexedCard,
   type Preset,
 } from "../src/core";
+import { NEW_STATE } from "../src/core/types";
+import { appendEvent, createReviewEvent, undoLastReview } from "../src/core/events";
+import { dueNow } from "../src/core/date";
+import { renderCardTemplate } from "../src/core/card-template";
 
 const now = new Date("2026-07-22T04:00:00.000Z");
 const presetSource = `---

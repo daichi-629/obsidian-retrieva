@@ -21,12 +21,12 @@
   let save = $state(false);
   let name = $state("");
 
-  $effect(() => plugin.index.onChange(() => (refreshToken += 1)));
+  $effect(() => plugin.cards.onChange(() => (refreshToken += 1)));
 
   function count(tagValue: string): string {
     void refreshToken;
     const queue = buildQueue(
-      plugin.index.cardsForTag(tagValue),
+      plugin.cards.cardsForTag(tagValue),
       plugin.effectivePresets(),
       new Date(),
     );
@@ -37,7 +37,7 @@
     void refreshToken;
     const saved = plugin.settingsStore.value.savedScopes;
     const savedTags = new Set(saved.map(scope => scope.tag));
-    const tags = plugin.index.scopeTags().filter(tagValue => !savedTags.has(tagValue));
+    const tags = plugin.cards.scopeTags().filter(tagValue => !savedTags.has(tagValue));
     return [
       { name: t("review.allCards"), tag: "" },
       ...saved,
@@ -47,7 +47,7 @@
 
   function allTags(): string[] {
     void refreshToken;
-    return plugin.index.scopeTags();
+    return plugin.cards.scopeTags();
   }
 
   function openSuspended(): void {
@@ -124,7 +124,7 @@
     {:else}
       {#each allTags() as value (value)}
         <button class="retrieva-tag-candidate" onclick={() => (tag = value)}>
-          {t("scope.cardTagCount", { tag: value, count: plugin.index.cardsForTag(value).length })}
+          {t("scope.cardTagCount", { tag: value, count: plugin.cards.cardsForTag(value).length })}
         </button>
       {/each}
     {/if}

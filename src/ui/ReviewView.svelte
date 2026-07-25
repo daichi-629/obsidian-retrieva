@@ -37,11 +37,11 @@
   let skippedFinished = $state(false);
   const skipped = new SvelteSet<string>();
 
-  $effect(() => plugin.index.onChange(() => (refreshToken += 1)));
+  $effect(() => plugin.cards.onChange(() => (refreshToken += 1)));
 
   const queue = $derived.by(() => {
     void refreshToken;
-    return buildQueue(plugin.index.cardsForTag(tag), plugin.effectivePresets(), new Date());
+    return buildQueue(plugin.cards.cardsForTag(tag), plugin.effectivePresets(), new Date());
   });
   const ready = $derived(queue.ready.filter(card => !skipped.has(card.path)));
   const skippedCount = $derived(queue.ready.length - ready.length);
@@ -49,7 +49,7 @@
 
   function reconcile(): void {
     const currentBefore = untrack(() => current);
-    const refreshed = currentBefore ? plugin.index.cards.get(currentBefore.path) : undefined;
+    const refreshed = currentBefore ? plugin.cards.getCard(currentBefore.path) : undefined;
     let candidate: IndexedCard | null;
     let resetAnswer = false;
     if (!currentBefore || !refreshed || refreshed.state.suspended) {
@@ -63,7 +63,7 @@
     }
     if (
       candidate &&
-      (!plugin.index.parsed.get(candidate.path) || !plugin.index.presets.get(candidate.presetId))
+      (!plugin.cards.getParsed(candidate.path) || !plugin.cards.getPreset(candidate.presetId))
     ) {
       candidate = null;
       resetAnswer = true;
@@ -80,11 +80,11 @@
     reconcile();
   });
 
-  const parsed = $derived(current ? plugin.index.parsed.get(current.path) : undefined);
-  const preset = $derived(current ? plugin.index.presets.get(current.presetId) : undefined);
+  const parsed = $derived(current ? plugin.cards.getParsed(current.path) : undefined);
+  const preset = $derived(current ? plugin.cards.getPreset(current.presetId) : undefined);
   const invalidCount = $derived.by(() => {
     void refreshToken;
-    return plugin.index.invalid.size;
+    return plugin.cards.invalidPaths().length;
   });
   const answerContext = $derived.by(() => {
     if (!current || !preset || !shownAnswer) return null;
@@ -125,7 +125,7 @@
     stateChanging = true;
     const card = current;
     const type = card.state.suspended ? "resume" : "suspend";
-    void plugin.repository
+    void plugin.cards
       .stateChange(
         card.path,
         card.lastEventId,
@@ -138,7 +138,7 @@
           new Notice(result.reason);
           current = null;
         } else {
-          current = type === "suspend" ? null : (plugin.index.cards.get(card.path) ?? null);
+          current = type === "suspend" ? null : (plugin.cards.getCard(card.path) ?? null);
         }
         reconcile();
       })
@@ -179,7 +179,7 @@
   async function submitAnswer(rating: Rating): Promise<void> {
     if (!current || !preset) return;
     const card = current;
-    const result = await plugin.repository.review(
+    const result = await plugin.cards.review(
       card.path,
       card.lastEventId,
       preset.fingerprint,
@@ -192,8 +192,6 @@
       new Notice(result.reason);
       current = null;
       reconcile();
-      if (result.reason.startsWith("Preset")) await plugin.index.rebuild();
-      else await plugin.index.refresh(card.path);
     } else {
       undoRecord = { path: card.path, eventId: result.eventId, sourceAfter: result.sourceAfter };
       current = null;
@@ -206,9 +204,7 @@
       new Notice(t("review.noUndo"));
       return;
     }
-    if (
-      !(await plugin.repository.undo(undoRecord.path, undoRecord.eventId, undoRecord.sourceAfter))
-    ) {
+    if (!(await plugin.cards.undo(undoRecord.path, undoRecord.eventId, undoRecord.sourceAfter))) {
       new Notice(t("review.undoUnavailable"));
       undoRecord = null;
       return;

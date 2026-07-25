@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { renderCardTemplate, uuidv7 } from "../src/core";
+import { uuidv7 } from "../src/core";
+import { renderCardTemplate } from "../src/core/card-template";
 
 const VAULT_DIR = path.resolve(import.meta.dirname, "../test-vault");
 const CARDS_DIR = path.join(VAULT_DIR, "Cards");

@@ -2,6 +2,7 @@ import type { EventRef, Plugin, TAbstractFile, TFile } from "obsidian";
 import { debounce } from "obsidian";
 import {
   hasCardTag,
+  hasMachineMarker,
   IDENTIFIERS,
   initializeCardMarkdown,
   collectScopeTags,
@@ -9,6 +10,7 @@ import {
   parseCardMarkdown,
   parsePresetMarkdown,
   uuidv7,
+  type Cache,
   type CardError,
   type IndexedCard,
   type ParsedCard,
@@ -16,12 +18,12 @@ import {
 } from "../core";
 import { ObsidianFileAdapter } from "./file-adapter";
 
-export class CardIndex {
-  readonly cards = new Map<string, IndexedCard>();
-  readonly parsed = new Map<string, ParsedCard>();
-  readonly invalid = new Map<string, CardError[]>();
-  readonly presets = new Map<string, Preset>();
-  readonly presetDefinitionIds = new Set<string>();
+export class CardIndex implements Cache {
+  private readonly cards = new Map<string, IndexedCard>();
+  private readonly parsed = new Map<string, ParsedCard>();
+  private readonly invalid = new Map<string, CardError[]>();
+  private readonly presets = new Map<string, Preset>();
+  private readonly presetDefinitionIds = new Set<string>();
   private refs: EventRef[] = [];
   private listeners = new Set<() => void>();
   private updateDebounced = debounce(
@@ -33,7 +35,7 @@ export class CardIndex {
   );
   constructor(
     private readonly plugin: Plugin,
-    readonly files: ObsidianFileAdapter,
+    private readonly files: ObsidianFileAdapter,
     private readonly excludedDirectories: () => string[] = () => [],
   ) {}
   isExcluded(path: string): boolean {
@@ -194,6 +196,42 @@ export class CardIndex {
     this.recomputeCards();
     this.emit();
   }
+  async deepValidate(): Promise<void> {
+    for (const file of this.files.listMarkdown()) {
+      if (this.isExcluded(file.path)) continue;
+      const source = await this.files.read(file);
+      if (!hasMachineMarker(source)) continue;
+      if (!this.parsed.has(file.path)) {
+        const parsed = parseCardMarkdown(file.path, source);
+        this.parsed.set(file.path, parsed);
+        this.invalid.set(file.path, [
+          ...parsed.errors,
+          { code: "missing-card-tag", message: `Card tag ${IDENTIFIERS.cardTag} is missing` },
+        ]);
+      }
+    }
+    const pathsById = new Map<string, string[]>();
+    for (const parsed of this.parsed.values())
+      if (parsed.cardId)
+        pathsById.set(parsed.cardId, [...(pathsById.get(parsed.cardId) ?? []), parsed.path]);
+    for (const [id, paths] of pathsById)
+      if (paths.length > 1)
+        for (const path of paths) {
+          const current = this.invalid.get(path) ?? [];
+          if (!current.some(error => error.code === "duplicate-card-id"))
+            this.invalid.set(path, [
+              ...current,
+              { code: "duplicate-card-id", message: `Duplicate card ID: ${id}` },
+            ]);
+        }
+    this.emit();
+  }
+  getCard(path: string): IndexedCard | undefined {
+    return this.cards.get(path);
+  }
+  listCards(): IndexedCard[] {
+    return [...this.cards.values()];
+  }
   cardsForTag(tag: string): IndexedCard[] {
     const clean = tag.replace(/^#/, "");
     return [...this.cards.values()].filter(card =>
@@ -203,8 +241,29 @@ export class CardIndex {
   scopeTags(): string[] {
     return collectScopeTags(this.cards.values());
   }
+  getParsed(path: string): ParsedCard | undefined {
+    return this.parsed.get(path);
+  }
+  hasParsed(path: string): boolean {
+    return this.parsed.has(path);
+  }
+  getPreset(id: string): Preset | undefined {
+    return this.presets.get(id);
+  }
+  presetEntries(): [string, Preset][] {
+    return [...this.presets];
+  }
   presetPaths(): string[] {
     return [...this.presets.values()].map(preset => preset.sourcePath);
+  }
+  hasPresetDefinition(id: string): boolean {
+    return this.presetDefinitionIds.has(id);
+  }
+  invalidPaths(): string[] {
+    return [...this.invalid.keys()];
+  }
+  invalidErrors(path: string): CardError[] {
+    return this.invalid.get(path) ?? [];
   }
   private async initializeIfNeeded(file: TFile, source: string): Promise<string> {
     const now = new Date();
