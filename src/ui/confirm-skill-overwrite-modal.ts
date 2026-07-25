@@ -30,7 +30,7 @@ export class ConfirmSkillOverwriteModal extends Modal {
       .addButton(button =>
         button
           .setButtonText(t("common.overwrite"))
-          .setDestructive()
+          .setWarning()
           .onClick(() => {
             this.confirmed = true;
             this.close();

@@ -1,5 +1,4 @@
 import type { App, Plugin } from "obsidian";
-import type { SettingDefinitionItem } from "obsidian";
 import { PluginSettingTab, Setting } from "obsidian";
 import { t } from "./i18n";
 import { normalizeExcludedDirectories } from "./core";
@@ -56,7 +55,105 @@ export class RetrievaSettingTab extends PluginSettingTab {
   ) {
     super(app, plugin);
   }
-  override getSettingDefinitions(): SettingDefinitionItem[] {
+  override display(): void {
+    this.containerEl.empty();
+    new Setting(this.containerEl).setName(t("settings.cardsFolder")).addText(text =>
+      text.setValue(this.store.value.cardsFolder).onChange(async value => {
+        this.store.value.cardsFolder = value.trim();
+        await this.store.save();
+      }),
+    );
+    new Setting(this.containerEl)
+      .setName(t("settings.excludedDirectories"))
+      .setDesc(t("settings.excludedDirectoriesDescription"))
+      .addTextArea(text => {
+        text
+          .setPlaceholder("Archive\ntemplates")
+          .setValue(this.store.value.excludedDirectories.join("\n"))
+          .onChange(async value => {
+            this.store.value.excludedDirectories = normalizeExcludedDirectories(value.split("\n"));
+            await this.store.save();
+          });
+        text.inputEl.addEventListener("blur", () => void this.rebuildIndex());
+      });
+    new Setting(this.containerEl).setName(t("settings.ribbon")).addToggle(toggle =>
+      toggle.setValue(this.store.value.showRibbonIcon).onChange(async value => {
+        this.store.value.showRibbonIcon = value;
+        await this.store.save();
+      }),
+    );
+    new Setting(this.containerEl).setName(t("settings.excludeNew")).addToggle(toggle =>
+      toggle.setValue(this.store.value.excludeNewSiblingsToday).onChange(async value => {
+        this.store.value.excludeNewSiblingsToday = value;
+        await this.store.save();
+      }),
+    );
+    new Setting(this.containerEl).setName(t("settings.excludeReview")).addToggle(toggle =>
+      toggle.setValue(this.store.value.excludeReviewSiblingsToday).onChange(async value => {
+        this.store.value.excludeReviewSiblingsToday = value;
+        await this.store.save();
+      }),
+    );
+    new Setting(this.containerEl).setName(t("settings.savedScopes")).setHeading();
+    this.store.value.savedScopes.forEach((scope, index) => {
+      new Setting(this.containerEl)
+        .addText(text =>
+          text.setValue(scope.name).onChange(async value => {
+            scope.name = value;
+            await this.store.save();
+          }),
+        )
+        .addText(text =>
+          text.setValue(scope.tag).onChange(async value => {
+            scope.tag = value.replace(/^#/, "");
+            await this.store.save();
+          }),
+        )
+        .addExtraButton(button =>
+          button
+            .setIcon("trash")
+            .setTooltip(t("settings.delete"))
+            .onClick(async () => {
+              this.store.value.savedScopes.splice(index, 1);
+              await this.store.save();
+              this.display();
+            }),
+        );
+    });
+    new Setting(this.containerEl).addButton(button =>
+      button.setButtonText(t("settings.addScope")).onClick(async () => {
+        this.store.value.savedScopes.push({ name: t("settings.newScope"), tag: "" });
+        await this.store.save();
+        this.display();
+      }),
+    );
+    new Setting(this.containerEl).setName(t("settings.presets")).setHeading();
+    for (const path of this.presetPaths())
+      new Setting(this.containerEl)
+        .setName(path)
+        .addButton(button =>
+          button.setButtonText(t("common.open")).onClick(() => void this.openPreset(path)),
+        );
+    new Setting(this.containerEl).setName(t("settings.llmSkills")).setHeading();
+    new Setting(this.containerEl)
+      .setName(t("settings.installSkills"))
+      .setDesc(t("settings.installSkillsDescription"))
+      .addButton(button =>
+        button.setButtonText(t("settings.installSkillsButton")).onClick(async () => {
+          button.setDisabled(true);
+          try {
+            await this.installProjectSkills();
+          } finally {
+            button.setDisabled(false);
+          }
+        }),
+      );
+  }
+
+  // Dead code retained for a future v1.13.0-only release. v1.12.0 does not
+  // provide getSettingDefinitions(), so display() above remains the active UI.
+  /*
+  private getSettingDefinitionsForObsidian113(): SettingDefinitionItem[] {
     return [
       {
         name: t("settings.cardsFolder"),
@@ -87,9 +184,9 @@ export class RetrievaSettingTab extends PluginSettingTab {
           });
         },
       },
-      this.toggleDefinition("settings.ribbon", "showRibbonIcon"),
-      this.toggleDefinition("settings.excludeNew", "excludeNewSiblingsToday"),
-      this.toggleDefinition("settings.excludeReview", "excludeReviewSiblingsToday"),
+      this.toggleDefinitionForObsidian113("settings.ribbon", "showRibbonIcon"),
+      this.toggleDefinitionForObsidian113("settings.excludeNew", "excludeNewSiblingsToday"),
+      this.toggleDefinitionForObsidian113("settings.excludeReview", "excludeReviewSiblingsToday"),
       {
         type: "group",
         heading: t("settings.savedScopes"),
@@ -117,6 +214,7 @@ export class RetrievaSettingTab extends PluginSettingTab {
                     .onClick(async () => {
                       this.store.value.savedScopes.splice(index, 1);
                       await this.store.save();
+                      // eslint-disable-next-line obsidianmd/no-unsupported-api -- dead v1.13+ UI
                       this.update();
                     }),
                 );
@@ -129,6 +227,7 @@ export class RetrievaSettingTab extends PluginSettingTab {
                 button.setButtonText(t("settings.addScope")).onClick(async () => {
                   this.store.value.savedScopes.push({ name: t("settings.newScope"), tag: "" });
                   await this.store.save();
+                  // eslint-disable-next-line obsidianmd/no-unsupported-api -- dead v1.13+ UI
                   this.update();
                 }),
               );
@@ -173,7 +272,7 @@ export class RetrievaSettingTab extends PluginSettingTab {
     ];
   }
 
-  private toggleDefinition(
+  private toggleDefinitionForObsidian113(
     nameKey: "settings.ribbon" | "settings.excludeNew" | "settings.excludeReview",
     key: "showRibbonIcon" | "excludeNewSiblingsToday" | "excludeReviewSiblingsToday",
   ): SettingDefinitionItem {
@@ -189,4 +288,5 @@ export class RetrievaSettingTab extends PluginSettingTab {
       },
     };
   }
+  */
 }
