@@ -4,6 +4,7 @@ import { tagFilter, type CardFilter } from "../core";
 import { t } from "../i18n";
 import type RetrievaPlugin from "../main";
 import CardListViewComponent from "./CardListView.svelte";
+import { cardListContext } from "./view-context";
 import { CARD_LIST_VIEW_TYPE } from "./view-types";
 
 export class CardListView extends ItemView {
@@ -47,7 +48,7 @@ export class CardListView extends ItemView {
     this.component = mount(CardListViewComponent, {
       target: this.contentEl,
       props: {
-        plugin: this.plugin,
+        context: cardListContext(this.plugin),
         scopeName: this.scopeName,
         filter: this.filter,
       },

@@ -1,17 +1,25 @@
 import { moment, Notice, Plugin, normalizePath } from "obsidian";
-import { CardService, IDENTIFIERS, type CardFilter, type Preset } from "./core";
+import {
+  CardService,
+  CardCreator,
+  CardRecoveryService,
+  CardWriteLock,
+  IDENTIFIERS,
+  type CardFilter,
+  type CardIndexReader,
+  type PresetCatalog,
+} from "./core";
+import { PresetResolver } from "./application/preset-resolver";
+import { VaultIndexService } from "./application/vault-index-service";
 import { CardIndex } from "./obsidian/card-index";
 import { ObsidianFileAdapter } from "./obsidian/file-adapter";
+import { registerRetrievaCommands, registerRetrievaViews } from "./obsidian/plugin-registration";
 import { DEFAULT_SETTINGS, RetrievaSettingTab, SettingsStore } from "./settings";
 import { initializeI18n, t } from "./i18n";
 import { installProjectSkills, projectSkillConflicts } from "./llm/skill-installer";
-import { CreateCardModal } from "./ui/create-card-modal";
 import { ConfirmSkillOverwriteModal } from "./ui/confirm-skill-overwrite-modal";
 import { CardListView } from "./ui/card-list-view";
-import { RecoveryView } from "./ui/recovery-view";
 import { ReviewView } from "./ui/review-view";
-import { ScopeView } from "./ui/scope-view";
-import { SuspendedView } from "./ui/suspended-view";
 import {
   CARD_LIST_VIEW_TYPE,
   RECOVERY_VIEW_TYPE,
@@ -23,6 +31,12 @@ import {
 export default class RetrievaPlugin extends Plugin {
   settingsStore!: SettingsStore;
   cards!: CardService;
+  creator!: CardCreator;
+  recovery!: CardRecoveryService;
+  index!: CardIndexReader;
+  presets!: PresetCatalog;
+  presetResolver!: PresetResolver;
+  private indexOperations!: VaultIndexService;
   private files!: ObsidianFileAdapter;
   private indexInitialization: Promise<void> | null = null;
   override async onload(): Promise<void> {
@@ -35,90 +49,36 @@ export default class RetrievaPlugin extends Plugin {
       this.files,
       () => this.settingsStore.value.excludedDirectories,
     );
-    this.cards = new CardService(this.files, cache);
-    this.registerView(SCOPE_VIEW_TYPE, leaf => new ScopeView(leaf, this));
-    this.registerView(REVIEW_VIEW_TYPE, leaf => new ReviewView(leaf, this));
-    this.registerView(RECOVERY_VIEW_TYPE, leaf => new RecoveryView(leaf, this));
-    this.registerView(SUSPENDED_VIEW_TYPE, leaf => new SuspendedView(leaf, this));
-    this.registerView(CARD_LIST_VIEW_TYPE, leaf => new CardListView(leaf, this));
-    this.addCommand({
-      id: "open",
-      name: t("command.open"),
-      callback: () => {
-        void this.activateView(SCOPE_VIEW_TYPE);
-      },
-    });
-    this.addCommand({
-      id: "create-card",
-      name: t("command.createCard"),
-      callback: async () => {
-        await this.ensureIndexReady();
-        new CreateCardModal(this, false).open();
-      },
-    });
-    this.addCommand({
-      id: "create-card-pair",
-      name: t("command.createPair"),
-      callback: async () => {
-        await this.ensureIndexReady();
-        new CreateCardModal(this, true).open();
-      },
-    });
-    this.addCommand({
-      id: "rebuild-index",
-      name: t("command.rebuild"),
-      callback: async () => {
-        await this.ensureIndexReady();
-        await this.cards.rebuild();
-        new Notice(t("notice.indexRebuilt"));
-      },
-    });
-    this.addCommand({
-      id: "validate-vault",
-      name: t("command.validate"),
-      callback: async () => {
-        await this.ensureIndexReady();
-        await this.cards.validateVault();
-        await this.activateView(RECOVERY_VIEW_TYPE);
-      },
-    });
-    this.addCommand({
-      id: "reset-active-card",
-      name: t("command.reset"),
-      checkCallback: checking => this.activeCardAction("reset", checking),
-    });
-    this.addCommand({
-      id: "toggle-suspend-active-card",
-      name: t("command.toggleSuspend"),
-      checkCallback: checking => this.activeCardAction("toggle", checking),
-    });
-    this.addCommand({
-      id: "open-suspended-cards",
-      name: t("command.openSuspended"),
-      callback: () => {
-        void this.activateView(SUSPENDED_VIEW_TYPE);
-      },
-    });
-    this.addCommand({
-      id: "install-project-skills",
-      name: t("command.installProjectSkills"),
-      callback: () => {
-        void this.installProjectSkills();
-      },
+    const cardWriteLock = new CardWriteLock();
+    this.cards = new CardService(this.files, cache, cache, cardWriteLock);
+    this.creator = new CardCreator(this.files, cache);
+    this.recovery = new CardRecoveryService(this.files, cache, cache, cardWriteLock);
+    this.index = cache;
+    this.presets = cache;
+    this.presetResolver = new PresetResolver(this.presets, () => ({
+      excludeNewSiblingsToday: this.settingsStore.value.excludeNewSiblingsToday,
+      excludeReviewSiblingsToday: this.settingsStore.value.excludeReviewSiblingsToday,
+    }));
+    this.indexOperations = new VaultIndexService(cache, cache, () => this.ensureDefaultPreset());
+    registerRetrievaViews(this, this);
+    registerRetrievaCommands(this, this, {
+      ensureIndexReady: () => this.ensureIndexReady(),
+      activateView: type => this.activateView(type),
+      rebuildIndex: () => this.indexOperations.rebuild(),
+      validateVault: () => this.indexOperations.validateVault(),
+      activeCardAction: (action, checking) => this.activeCardAction(action, checking),
+      installProjectSkills: () => this.installProjectSkills(),
     });
     this.addSettingTab(
-      new RetrievaSettingTab(
-        this.app,
-        this,
-        this.settingsStore,
-        path => this.openFile(path),
-        () => this.cards.presetPaths(),
-        () => this.installProjectSkills(),
-        async () => {
+      new RetrievaSettingTab(this.app, this, this.settingsStore, {
+        openPreset: path => this.openFile(path),
+        presetPaths: () => this.presets.presetPaths(),
+        installProjectSkills: () => this.installProjectSkills(),
+        rebuildIndex: async () => {
           await this.ensureIndexReady();
-          await this.cards.rebuild();
+          await this.indexOperations.rebuild();
         },
-      ),
+      }),
     );
     if (this.settingsStore.value.showRibbonIcon)
       this.addRibbonIcon("brain-circuit", t("ribbon.open"), () => {
@@ -160,23 +120,7 @@ export default class RetrievaPlugin extends Plugin {
     await this.indexInitialization;
   }
   private async initializeIndex(): Promise<void> {
-    await this.cards.start();
-    if (!this.cards.hasPresetDefinition("default")) {
-      await this.ensureDefaultPreset();
-      await this.cards.rebuild();
-    }
-  }
-  effectivePresets(): Map<string, Preset> {
-    return new Map(
-      this.cards.presetEntries().map(([id, preset]) => [
-        id,
-        {
-          ...preset,
-          excludeNewSiblingsToday: this.settingsStore.value.excludeNewSiblingsToday,
-          excludeReviewSiblingsToday: this.settingsStore.value.excludeReviewSiblingsToday,
-        },
-      ]),
-    );
+    await this.indexOperations.initialize();
   }
   private async ensureDefaultPreset(): Promise<void> {
     const path = normalizePath("Retrieva/Presets/default.md");
@@ -193,7 +137,7 @@ export default class RetrievaPlugin extends Plugin {
   }): Promise<void> {
     await this.ensureIndexReady();
     const folder = this.settingsStore.value.cardsFolder.replace(/^\/+|\/+$/g, "");
-    const result = await this.cards.createCards({ ...input, folder });
+    const result = await this.creator.create({ ...input, folder });
     if (result.status === "exists") {
       new Notice(t("notice.fileExists"));
       return;
@@ -203,7 +147,7 @@ export default class RetrievaPlugin extends Plugin {
   }
   private activeCardAction(action: "reset" | "toggle", checking: boolean): boolean {
     const path = this.app.workspace.getActiveFile()?.path;
-    const card = path ? this.cards.getCard(path) : undefined;
+    const card = path ? this.index.getCard(path) : undefined;
     if (!card) return false;
     if (checking) return true;
     const type = action === "reset" ? "reset" : card.state.suspended ? "resume" : "suspend";

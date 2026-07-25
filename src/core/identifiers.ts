@@ -4,6 +4,7 @@ export const IDENTIFIERS = Object.freeze({
   cardTag: `${PLUGIN_ID}-card`,
   presetKey: `${PLUGIN_ID}-preset`,
   siblingGroupKey: `${PLUGIN_ID}-sibling-group`,
+  cardFormatKey: `${PLUGIN_ID}-format`,
   presetDefinitionKey: `${PLUGIN_ID}-preset-definition`,
   presetIdKey: `${PLUGIN_ID}-preset-id`,
   answerMarker: `${PLUGIN_NAME.toUpperCase()}-ANSWER`,

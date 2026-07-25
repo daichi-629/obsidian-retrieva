@@ -3,6 +3,7 @@ import { mount, unmount } from "svelte";
 import { t } from "../i18n";
 import type RetrievaPlugin from "../main";
 import RecoveryViewComponent from "./RecoveryView.svelte";
+import { recoveryContext } from "./view-context";
 import { RECOVERY_VIEW_TYPE } from "./view-types";
 
 export class RecoveryView extends ItemView {
@@ -27,7 +28,7 @@ export class RecoveryView extends ItemView {
     this.contentEl.addClass("retrieva-view");
     this.component = mount(RecoveryViewComponent, {
       target: this.contentEl,
-      props: { plugin: this.plugin },
+      props: { context: recoveryContext(this.plugin) },
     });
   }
   override async onClose(): Promise<void> {

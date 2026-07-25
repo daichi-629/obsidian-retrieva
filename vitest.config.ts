@@ -1,6 +1,12 @@
+import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      obsidian: path.resolve(__dirname, "tests/obsidian-mock.ts"),
+    },
+  },
   plugins: [
     {
       name: "markdown-as-text",

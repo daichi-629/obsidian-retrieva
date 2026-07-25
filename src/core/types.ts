@@ -62,17 +62,20 @@ export interface ParsedCard {
   tags: string[];
   presetId: string | null;
   siblingGroupId: string | null;
+  formatId: string;
   cardId: string | null;
   front: string;
   back: string;
   events: CardEvent[];
   rawEventLines: string[];
   errors: CardError[];
-  ranges: {
-    answer: [number, number] | null;
-    card: [number, number] | null;
-    log: [number, number] | null;
-  };
+  ranges: CardRanges;
+}
+
+export interface CardRanges {
+  answer: [number, number] | null;
+  card: [number, number] | null;
+  log: [number, number] | null;
 }
 
 export interface CardError {

@@ -3,6 +3,7 @@ import { mount, unmount } from "svelte";
 import { t } from "../i18n";
 import type RetrievaPlugin from "../main";
 import ReviewViewComponent from "./ReviewView.svelte";
+import { reviewContext } from "./view-context";
 import { REVIEW_VIEW_TYPE } from "./view-types";
 
 export class ReviewView extends ItemView {
@@ -47,7 +48,7 @@ export class ReviewView extends ItemView {
     this.component = mount(ReviewViewComponent, {
       target: this.contentEl,
       props: {
-        plugin: this.plugin,
+        context: reviewContext(this.plugin),
         view: this,
         scopeName: this.scopeName,
         tag: this.tag,
