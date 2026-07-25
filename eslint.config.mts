@@ -10,6 +10,7 @@ export default defineConfig(
     "package.json",
     "package-lock.json",
     "versions.json",
+    "test-vault",
   ]),
   {
     languageOptions: {
@@ -34,6 +35,17 @@ export default defineConfig(
     files: ["src/settings.ts"],
     rules: {
       "obsidianmd/settings-tab/prefer-setting-definitions": "off",
+    },
+  },
+  {
+    files: ["scripts/**/*.ts"],
+    languageOptions: {
+      globals: { ...globals.node },
+    },
+    rules: {
+      "obsidianmd/no-nodejs-modules": "off",
+      "obsidianmd/hardcoded-config-path": "off",
+      "obsidianmd/rule-custom-message": "off",
     },
   },
 );

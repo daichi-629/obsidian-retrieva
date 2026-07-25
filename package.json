@@ -10,7 +10,9 @@
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "generate:vault": "jiti scripts/generate-test-cards.ts",
+    "sync:vault": "jiti scripts/sync-vault-plugin.ts"
   },
   "keywords": [
     "obsidian",
