@@ -7,35 +7,35 @@
     type CardEvent,
   } from "../core";
   import { t } from "../i18n";
-  import type RetrievaPlugin from "../main";
+  import type { RecoveryContext } from "./view-context";
 
   interface Props {
-    plugin: RetrievaPlugin;
+    context: RecoveryContext;
   }
-  const { plugin }: Props = $props();
+  const { context }: Props = $props();
 
   let refreshToken = $state(0);
   let selectedPath = $state<string | null>(null);
   let draft = $state("");
 
-  $effect(() => plugin.cards.onChange(() => (refreshToken += 1)));
+  $effect(() => context.index.onChange(() => (refreshToken += 1)));
 
   const paths = $derived.by(() => {
     void refreshToken;
-    return plugin.cards.invalidPaths().sort();
+    return context.index.invalidPaths().sort();
   });
   const errors = $derived.by(() => {
     void refreshToken;
-    return selectedPath ? plugin.cards.invalidErrors(selectedPath) : [];
+    return selectedPath ? context.index.invalidErrors(selectedPath) : [];
   });
   const hasParsed = $derived.by(() => {
     void refreshToken;
-    return selectedPath ? plugin.cards.hasParsed(selectedPath) : false;
+    return selectedPath ? context.index.hasParsed(selectedPath) : false;
   });
 
   async function loadDraft(): Promise<void> {
     if (!selectedPath) return;
-    draft = (await plugin.cards.loadRawLog(selectedPath)) ?? "";
+    draft = (await context.recovery.loadRawLog(selectedPath)) ?? "";
   }
 
   function onSelectChange(event: Event & { currentTarget: HTMLSelectElement }): void {
@@ -45,13 +45,13 @@
 
   function openSelectedFile(): void {
     if (!selectedPath) return;
-    void plugin.openFile(selectedPath);
+    void context.openFile(selectedPath);
   }
 
   async function repair(reissue: boolean): Promise<void> {
     if (!selectedPath) return;
     try {
-      await plugin.cards.repairMetadata(selectedPath, reissue);
+      await context.recovery.repairMetadata(selectedPath, reissue);
       await loadDraft();
     } catch (error) {
       new Notice(String(error));
@@ -106,7 +106,7 @@
       new Notice(validationErrors.map(error => error.message).join("\n"));
       return;
     }
-    const result = await plugin.cards.saveRawLog(selectedPath, events);
+    const result = await context.recovery.saveRawLog(selectedPath, events);
     if (result === "not-found") return;
     if (result === "missing-markers") {
       new Notice(t("recovery.fixMarkers"));

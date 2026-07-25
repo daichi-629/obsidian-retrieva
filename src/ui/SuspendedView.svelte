@@ -3,21 +3,21 @@
   import { SvelteSet } from "svelte/reactivity";
   import { IDENTIFIERS, type IndexedCard } from "../core";
   import { t } from "../i18n";
-  import type RetrievaPlugin from "../main";
+  import type { SuspendedContext } from "./view-context";
 
   interface Props {
-    plugin: RetrievaPlugin;
+    context: SuspendedContext;
   }
-  const { plugin }: Props = $props();
+  const { context }: Props = $props();
 
   let refreshToken = $state(0);
   const resuming = new SvelteSet<string>();
 
-  $effect(() => plugin.cards.onChange(() => (refreshToken += 1)));
+  $effect(() => context.index.onChange(() => (refreshToken += 1)));
 
   const cards = $derived.by(() => {
     void refreshToken;
-    return plugin.cards
+    return context.index
       .listCards()
       .filter(card => card.state.suspended)
       .sort((left, right) => left.path.localeCompare(right.path));
@@ -31,13 +31,13 @@
   }
 
   function openCard(path: string): void {
-    void plugin.openFile(path);
+    void context.openFile(path);
   }
 
   async function resume(path: string, lastEventId: string): Promise<void> {
     resuming.add(path);
     try {
-      const result = await plugin.cards.stateChange(
+      const result = await context.cards.stateChange(
         path,
         lastEventId,
         "resume",

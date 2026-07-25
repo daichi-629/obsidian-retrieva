@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { MarkdownRenderer, Notice, type ItemView } from "obsidian";
+  import { Notice, type ItemView } from "obsidian";
   import { untrack } from "svelte";
   import { SvelteSet } from "svelte/reactivity";
   import {
@@ -7,11 +7,12 @@
     calculateAnswerCandidates,
     formatDue,
     RATINGS,
+    tagFilter,
     type IndexedCard,
     type Rating,
   } from "../core";
   import { t } from "../i18n";
-  import type RetrievaPlugin from "../main";
+  import type { ReviewContext } from "./view-context";
 
   interface UndoRecord {
     path: string;
@@ -20,12 +21,12 @@
   }
 
   interface Props {
-    plugin: RetrievaPlugin;
+    context: ReviewContext;
     view: ItemView;
     scopeName: string;
     tag: string;
   }
-  const { plugin, view, scopeName, tag }: Props = $props();
+  const { context, view, scopeName, tag }: Props = $props();
 
   let refreshToken = $state(0);
   let current = $state<IndexedCard | null>(null);
@@ -36,11 +37,15 @@
   let skippedFinished = $state(false);
   const skipped = new SvelteSet<string>();
 
-  $effect(() => plugin.cards.onChange(() => (refreshToken += 1)));
+  $effect(() => context.index.onChange(() => (refreshToken += 1)));
 
   const queue = $derived.by(() => {
     void refreshToken;
-    return buildQueue(plugin.cards.cardsForTag(tag), plugin.effectivePresets(), new Date());
+    return buildQueue(
+      context.index.cardsMatching(tagFilter(tag)),
+      context.effectivePresets(),
+      new Date(),
+    );
   });
   const ready = $derived(queue.ready.filter(card => !skipped.has(card.path)));
   const skippedCount = $derived(queue.ready.length - ready.length);
@@ -48,7 +53,7 @@
 
   function reconcile(): void {
     const currentBefore = untrack(() => current);
-    const refreshed = currentBefore ? plugin.cards.getCard(currentBefore.path) : undefined;
+    const refreshed = currentBefore ? context.index.getCard(currentBefore.path) : undefined;
     let candidate: IndexedCard | null;
     let resetAnswer = false;
     if (!currentBefore || !refreshed || refreshed.state.suspended) {
@@ -62,7 +67,7 @@
     }
     if (
       candidate &&
-      (!plugin.cards.getParsed(candidate.path) || !plugin.cards.getPreset(candidate.presetId))
+      (!context.index.getParsed(candidate.path) || !context.presets.getPreset(candidate.presetId))
     ) {
       candidate = null;
       resetAnswer = true;
@@ -79,8 +84,8 @@
     reconcile();
   });
 
-  const parsed = $derived(current ? plugin.cards.getParsed(current.path) : undefined);
-  const preset = $derived(current ? plugin.cards.getPreset(current.presetId) : undefined);
+  const parsed = $derived(current ? context.index.getParsed(current.path) : undefined);
+  const preset = $derived(current ? context.presets.getPreset(current.presetId) : undefined);
   const answerContext = $derived.by(() => {
     if (!current || !preset || !shownAnswer) return null;
     const now = new Date();
@@ -97,7 +102,7 @@
   function markdownAction(node: HTMLElement, params: MdParams) {
     function run(p: MdParams): void {
       node.empty();
-      void MarkdownRenderer.render(plugin.app, p.source, node, p.path, view);
+      void context.renderMarkdown(p.source, node, p.path, view);
     }
     run(params);
     return {
@@ -120,7 +125,7 @@
     stateChanging = true;
     const card = current;
     const type = card.state.suspended ? "resume" : "suspend";
-    void plugin.cards
+    void context.cards
       .stateChange(
         card.path,
         card.lastEventId,
@@ -133,7 +138,7 @@
           new Notice(result.reason);
           current = null;
         } else {
-          current = type === "suspend" ? null : (plugin.cards.getCard(card.path) ?? null);
+          current = type === "suspend" ? null : (context.index.getCard(card.path) ?? null);
         }
         reconcile();
       })
@@ -144,7 +149,7 @@
 
   function openCard(): void {
     if (!current) return;
-    void plugin.openFile(current.path);
+    void context.openFile(current.path);
   }
 
   function reveal(): void {
@@ -166,7 +171,7 @@
   async function submitAnswer(rating: Rating): Promise<void> {
     if (!current || !preset) return;
     const card = current;
-    const result = await plugin.cards.review(
+    const result = await context.cards.review(
       card.path,
       card.lastEventId,
       preset.fingerprint,
@@ -191,7 +196,7 @@
       new Notice(t("review.noUndo"));
       return;
     }
-    if (!(await plugin.cards.undo(undoRecord.path, undoRecord.eventId, undoRecord.sourceAfter))) {
+    if (!(await context.cards.undo(undoRecord.path, undoRecord.eventId, undoRecord.sourceAfter))) {
       new Notice(t("review.undoUnavailable"));
       undoRecord = null;
       return;

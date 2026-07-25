@@ -10,22 +10,30 @@ export interface FileAdapter<FileRef = unknown> {
   create(path: string, source: string): Promise<FileRef>;
 }
 
-export interface Cache {
+/** Read model consumed by views and card use-cases. */
+export interface CardIndexReader {
   onChange(listener: () => void): () => void;
   getCard(path: string): IndexedCard | undefined;
   listCards(): IndexedCard[];
-  cardsForTag(tag: string): IndexedCard[];
   cardsMatching(filter: CardFilter): IndexedCard[];
   scopeTags(): string[];
   getParsed(path: string): ParsedCard | undefined;
   hasParsed(path: string): boolean;
+  invalidPaths(): string[];
+  invalidErrors(path: string): CardError[];
+  isExcluded(path: string): boolean;
+}
+
+/** Valid preset definitions available to card operations and settings UI. */
+export interface PresetCatalog {
   getPreset(id: string): Preset | undefined;
   presetEntries(): [string, Preset][];
   presetPaths(): string[];
   hasPresetDefinition(id: string): boolean;
-  invalidPaths(): string[];
-  invalidErrors(path: string): CardError[];
-  isExcluded(path: string): boolean;
+}
+
+/** Commands that synchronize the read model with the vault. */
+export interface CardIndexLifecycle {
   start(): Promise<void>;
   refresh(path: string): Promise<void>;
   rebuild(): Promise<void>;

@@ -22,6 +22,8 @@ import { NEW_STATE } from "../src/core/types";
 import { appendEvent, createReviewEvent, undoLastReview } from "../src/core/events";
 import { dueNow } from "../src/core/date";
 import { renderCardTemplate } from "../src/core/card-template";
+import { buildCardIndex } from "../src/obsidian/card-index-model";
+import { PresetResolver } from "../src/application/preset-resolver";
 
 const now = new Date("2026-07-22T04:00:00.000Z");
 const presetSource = `---
@@ -123,6 +125,32 @@ describe("card Markdown", () => {
     expect(after.includes("\r\n" + JSON.stringify(event) + "\r\n")).toBe(true);
     expect(after.endsWith("\n")).toBe(false);
   });
+  it("selects the declared card format and reports unsupported formats", () => {
+    const parsed = parseCardMarkdown(
+      "Cards/format.md",
+      cardSource().replace("---\n", "---\nretrieva-format: cloze\n"),
+    );
+    expect(parsed.formatId).toBe("front-back");
+    expect(parsed.errors.map(error => error.code)).toContain("unsupported-card-format");
+  });
+});
+
+describe("preset resolver", () => {
+  it("applies user sibling overrides without mutating file-derived presets", () => {
+    const resolver = new PresetResolver(
+      {
+        getPreset: id => (id === preset.id ? preset : undefined),
+        presetEntries: () => [[preset.id, preset]],
+        presetPaths: () => [preset.sourcePath],
+        hasPresetDefinition: id => id === preset.id,
+      },
+      () => ({ excludeNewSiblingsToday: false, excludeReviewSiblingsToday: false }),
+    );
+    const resolved = resolver.resolveAll().get(preset.id)!;
+    expect(resolved.excludeNewSiblingsToday).toBe(false);
+    expect(resolved.excludeReviewSiblingsToday).toBe(false);
+    expect(preset.excludeNewSiblingsToday).toBe(true);
+  });
 });
 
 describe("excluded directories", () => {
@@ -134,6 +162,38 @@ describe("excluded directories", () => {
     expect(isPathExcluded("Archive/broken.md", ["Archive"])).toBe(true);
     expect(isPathExcluded("Archive-old/card.md", ["Archive"])).toBe(false);
     expect(isPathExcluded("Drafts/Old/card.md", ["Drafts\\Old"])).toBe(true);
+  });
+});
+
+describe("card index model", () => {
+  it("resolves presets before admitting cards and reports duplicate IDs", () => {
+    const duplicatePreset = presetSource.replace("default", "default");
+    const index = buildCardIndex([
+      { path: "Presets/one.md", source: presetSource },
+      { path: "Presets/two.md", source: duplicatePreset },
+      { path: "Cards/one.md", source: cardSource() },
+      { path: "Cards/two.md", source: cardSource() },
+    ]);
+
+    expect(index.cards).toHaveLength(0);
+    expect(index.presets).toHaveLength(0);
+    expect(index.invalid.get("Presets/one.md")?.map(error => error.code)).toEqual([
+      "duplicate-preset",
+    ]);
+    expect(index.invalid.get("Cards/one.md")?.map(error => error.code)).toContain(
+      "duplicate-card-id",
+    );
+  });
+
+  it("only indexes untagged machine documents during deep validation", () => {
+    const source = cardSource().replace(IDENTIFIERS.cardTag, "note");
+    const shallow = buildCardIndex([{ path: "Cards/untagged.md", source }]);
+    const deep = buildCardIndex([{ path: "Cards/untagged.md", source }], { deepValidation: true });
+
+    expect(shallow.invalid).toHaveLength(0);
+    expect(deep.invalid.get("Cards/untagged.md")?.map(error => error.code)).toContain(
+      "missing-card-tag",
+    );
   });
 });
 

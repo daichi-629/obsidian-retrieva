@@ -3,6 +3,7 @@ import { mount, unmount } from "svelte";
 import { t } from "../i18n";
 import type RetrievaPlugin from "../main";
 import SuspendedViewComponent from "./SuspendedView.svelte";
+import { suspendedContext } from "./view-context";
 import { SUSPENDED_VIEW_TYPE } from "./view-types";
 
 export class SuspendedView extends ItemView {
@@ -27,7 +28,7 @@ export class SuspendedView extends ItemView {
     this.contentEl.addClass("retrieva-view");
     this.component = mount(SuspendedViewComponent, {
       target: this.contentEl,
-      props: { plugin: this.plugin },
+      props: { context: suspendedContext(this.plugin) },
     });
   }
   override async onClose(): Promise<void> {

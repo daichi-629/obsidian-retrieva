@@ -1,18 +1,18 @@
 <script lang="ts">
   import { formatDue, IDENTIFIERS, type CardFilter, type IndexedCard } from "../core";
   import { t } from "../i18n";
-  import type RetrievaPlugin from "../main";
+  import type { CardListContext } from "./view-context";
 
   interface Props {
-    plugin: RetrievaPlugin;
+    context: CardListContext;
     scopeName: string;
     filter: CardFilter;
   }
-  const { plugin, scopeName, filter }: Props = $props();
+  const { context, scopeName, filter }: Props = $props();
 
   let refreshToken = $state(0);
 
-  $effect(() => plugin.cards.onChange(() => (refreshToken += 1)));
+  $effect(() => context.index.onChange(() => (refreshToken += 1)));
 
   function dueTimestamp(card: IndexedCard, now: Date): number {
     const due = card.state.due;
@@ -23,7 +23,7 @@
   const cards = $derived.by(() => {
     void refreshToken;
     const now = new Date();
-    return plugin.cards
+    return context.index
       .cardsMatching(filter)
       .slice()
       .sort((left, right) => {
@@ -48,7 +48,7 @@
   }
 
   function openCard(path: string): void {
-    void plugin.openFile(path);
+    void context.openFile(path);
   }
 </script>
 

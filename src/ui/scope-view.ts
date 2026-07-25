@@ -2,6 +2,7 @@ import { ItemView, type WorkspaceLeaf } from "obsidian";
 import { mount, unmount } from "svelte";
 import type RetrievaPlugin from "../main";
 import ScopeViewComponent from "./ScopeView.svelte";
+import { scopeContext } from "./view-context";
 import { SCOPE_VIEW_TYPE } from "./view-types";
 
 export class ScopeView extends ItemView {
@@ -26,7 +27,7 @@ export class ScopeView extends ItemView {
     this.contentEl.addClass("retrieva-view");
     this.component = mount(ScopeViewComponent, {
       target: this.contentEl,
-      props: { plugin: this.plugin },
+      props: { context: scopeContext(this.plugin) },
     });
   }
   override async onClose(): Promise<void> {
