@@ -2,7 +2,7 @@ import { offsetDateTime } from "./date";
 import { IDENTIFIERS, MARKERS } from "./identifiers";
 import { uuidv7 } from "./id";
 import { parseCardMarkdown } from "./card-parser";
-import type { CardIndexLifecycle, CardIndexReader, FileAdapter } from "./ports";
+import type { CardIndexLifecycle, CardIndexReader, FileAdapter, PresetCatalog } from "./ports";
 import type { CardEvent } from "./types";
 import { NEW_STATE } from "./types";
 import { CardWriteLock } from "./card-write-lock";
@@ -13,7 +13,7 @@ export type SaveDraftResult = "saved" | "still-invalid" | "missing-markers" | "n
 export class CardRecoveryService {
   constructor(
     private readonly files: FileAdapter,
-    private readonly index: CardIndexReader,
+    private readonly index: CardIndexReader & PresetCatalog,
     private readonly lifecycle: CardIndexLifecycle,
     private readonly lock: CardWriteLock,
   ) {}
@@ -25,6 +25,27 @@ export class CardRecoveryService {
       let source = await this.files.readFresh(file);
       let parsed = parseCardMarkdown(path, source);
       const now = new Date();
+
+      if (!parsed.presetId || !this.index.getPreset(parsed.presetId)) {
+        const availablePreset = this.index.getPreset("default")
+          ? "default"
+          : this.index.presetEntries()[0]?.[0];
+        if (availablePreset) {
+          if (source.includes(`${IDENTIFIERS.presetKey}:`))
+            source = source.replace(
+              new RegExp(`${IDENTIFIERS.presetKey}:.*`),
+              `${IDENTIFIERS.presetKey}: ${availablePreset}`,
+            );
+          else if (/^---\r?\n/.test(source))
+            source = source.replace(
+              /^(---\r?\n)/,
+              `$1${IDENTIFIERS.presetKey}: ${availablePreset}\n`,
+            );
+          else
+            source = `---\n${IDENTIFIERS.presetKey}: ${availablePreset}\ntags: [${IDENTIFIERS.cardTag}]\n---\n${source}`;
+          parsed = parseCardMarkdown(path, source);
+        }
+      }
       if (reissueCardId || !parsed.cardId) {
         const marker = `${MARKERS.cardPrefix}${JSON.stringify({ v: 1, id: uuidv7(now.getTime()) })}-->`;
         if (parsed.ranges.card)
@@ -51,14 +72,6 @@ export class CardRecoveryService {
         parsed = parseCardMarkdown(path, source);
       }
       if (!parsed.events.some(event => event.type === "created")) {
-        if (
-          parsed.errors.some(error =>
-            ["invalid-json", "event-schema", "log-marker-count"].includes(error.code),
-          )
-        )
-          throw new Error(
-            "Fix malformed JSONL or duplicate log markers before generating a created event",
-          );
         const created: CardEvent = {
           v: 1,
           eid: uuidv7(now.getTime() + 1),

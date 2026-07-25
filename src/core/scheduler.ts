@@ -36,23 +36,30 @@ function toCard(state: CardState, now: Date, lastReviewAt?: string): Card {
   };
 }
 
-function fromCard(card: Card, previous: CardState): CardState {
+function fromCard(card: Card, previous: CardState, maxInterval?: number): CardState {
   const phase = phaseMap[card.state];
   const isShort = phase === "learning" || phase === "relearning";
+  const rawDue = card.due;
+  const safeDue =
+    !rawDue || Number.isNaN(rawDue.getTime()) || rawDue.getFullYear() > 9999
+      ? new Date("9999-12-31T23:59:59.000Z")
+      : rawDue;
+  const rawInterval = Number.isFinite(card.scheduled_days) ? card.scheduled_days : 1;
+  const interval = maxInterval ? Math.min(rawInterval, maxInterval) : rawInterval;
   return {
     v: 1,
     phase,
     due: isShort
-      ? { kind: "instant", at: offsetDateTime(card.due) }
+      ? { kind: "instant", at: offsetDateTime(safeDue) }
       : phase === "new"
         ? null
         : {
             kind: "day",
-            date: `${card.due.getFullYear()}-${String(card.due.getMonth() + 1).padStart(2, "0")}-${String(card.due.getDate()).padStart(2, "0")}`,
+            date: `${String(safeDue.getFullYear()).padStart(4, "0")}-${String(safeDue.getMonth() + 1).padStart(2, "0")}-${String(safeDue.getDate()).padStart(2, "0")}`,
           },
-    interval: card.scheduled_days,
-    stability: Number(card.stability.toFixed(6)),
-    difficulty: Number(card.difficulty.toFixed(6)),
+    interval,
+    stability: Number.isFinite(card.stability) ? Number(card.stability.toFixed(6)) : 1,
+    difficulty: Number.isFinite(card.difficulty) ? Number(card.difficulty.toFixed(6)) : 5,
     reps: card.reps,
     lapses: card.lapses,
     learningStep: card.learning_steps,
@@ -77,10 +84,10 @@ export function calculateAnswerCandidates(
   );
   const results = scheduler.repeat(toCard(state, now, lastReviewAt), now);
   return {
-    again: fromCard(results[FsrsRating.Again].card, state),
-    hard: fromCard(results[FsrsRating.Hard].card, state),
-    good: fromCard(results[FsrsRating.Good].card, state),
-    easy: fromCard(results[FsrsRating.Easy].card, state),
+    again: fromCard(results[FsrsRating.Again].card, state, preset.maximumIntervalDays),
+    hard: fromCard(results[FsrsRating.Hard].card, state, preset.maximumIntervalDays),
+    good: fromCard(results[FsrsRating.Good].card, state, preset.maximumIntervalDays),
+    easy: fromCard(results[FsrsRating.Easy].card, state, preset.maximumIntervalDays),
   };
 }
 

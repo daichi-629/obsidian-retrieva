@@ -1,10 +1,11 @@
 export type { CardIndexLifecycle, CardIndexReader, FileAdapter, PresetCatalog } from "./ports";
 export type { CardError, CardEvent, IndexedCard, ParsedCard, Preset, Rating } from "./types";
 export { RATINGS } from "./types";
-export { IDENTIFIERS } from "./identifiers";
+export { IDENTIFIERS, MARKERS } from "./identifiers";
 export { uuidv7 } from "./id";
 export { hasCardTag, hasMachineMarker, parseCardMarkdown } from "./card-parser";
 export { frontBackCardFormat, resolveCardFormat, type CardFormat } from "./card-formats";
+export { undoLastReview } from "./front-back-card-format";
 export { initializeCardMarkdown } from "./card-initialization";
 export { parsePresetMarkdown } from "./preset";
 export { collectScopeTags, buildTagTree, type TagTreeNode } from "./scope-tags";
@@ -12,6 +13,7 @@ export { cardsMatching, matchesFilter, tagFilter, type CardFilter } from "./card
 export { isPathExcluded, normalizeExcludedDirectories } from "./excluded-directories";
 export { buildQueue } from "./queue";
 export { calculateAnswerCandidates, formatDue } from "./scheduler";
+export { eventOccurredToday } from "./date";
 export { sortAndRegenerateParents } from "./recovery";
 export { parseEvent, validateLinearHistory } from "./validation";
 export { CardService, type WriteResult } from "./card-service";

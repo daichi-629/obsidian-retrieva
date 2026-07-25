@@ -110,10 +110,14 @@ export class CardService {
       const source = await this.files.readFresh(file);
       if (source !== exactSourceAfter) return false;
       const parsed = parseCardMarkdown(path, source);
-      const before = undoLastReview(source, parsed, eventId);
-      await this.files.write(file, before);
-      await this.lifecycle.refresh(path);
-      return true;
+      try {
+        const before = undoLastReview(source, parsed, eventId);
+        await this.files.write(file, before);
+        await this.lifecycle.refresh(path);
+        return true;
+      } catch {
+        return false;
+      }
     });
   }
 }

@@ -84,6 +84,7 @@ function indexPresets(
   for (const [id, paths] of pathsById) {
     if (paths.length < 2) continue;
     presets.delete(id);
+    presetDefinitionIds.delete(id);
     for (const path of paths) invalid.set(path, [duplicatePresetError(id)]);
   }
   return { presets, presetDefinitionIds, presetPaths };
@@ -114,6 +115,8 @@ function indexCards(
     const card = toIndexedCard(document);
     if (!card) {
       const errors = [...document.errors];
+      if (!document.cardId)
+        errors.push({ code: "missing-card-marker", message: "Card marker is missing" });
       if (!document.presetId)
         errors.push({ code: "missing-preset-reference", message: "Preset reference is missing" });
       else if (!presets.has(document.presetId))

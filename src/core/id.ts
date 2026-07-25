@@ -1,6 +1,6 @@
 export function uuidv7(now: number = Date.now(), random: () => number = Math.random): string {
   const bytes = new Uint8Array(16);
-  let timestamp = BigInt(now);
+  let timestamp = BigInt(Math.max(0, Math.floor(now))) & 0xffffffffffffn;
   for (let i = 5; i >= 0; i--) {
     bytes[i] = Number(timestamp & 0xffn);
     timestamp >>= 8n;

@@ -31,8 +31,18 @@ export function initializeCardMarkdown(
     zone: input.zone,
     state: { ...NEW_STATE },
   };
+  const cardMarkerPart = source.includes(IDENTIFIERS.cardMarker)
+    ? ""
+    : `${MARKERS.cardPrefix}${JSON.stringify({ v: 1, id: input.cardId })}-->`;
+  const logMarkerPart = source.includes(IDENTIFIERS.logMarker)
+    ? ""
+    : `${MARKERS.logStart}${parsed.newline}${JSON.stringify(created)}${parsed.newline}${MARKERS.logEnd}`;
+
+  const parts = [cardMarkerPart, logMarkerPart].filter(Boolean);
+  if (parts.length === 0) return null;
+
   const separator = source.endsWith(parsed.newline)
     ? parsed.newline
     : `${parsed.newline}${parsed.newline}`;
-  return `${source}${separator}${MARKERS.cardPrefix}${JSON.stringify({ v: 1, id: input.cardId })}-->${parsed.newline}${parsed.newline}${MARKERS.logStart}${parsed.newline}${JSON.stringify(created)}${parsed.newline}${MARKERS.logEnd}${parsed.newline}`;
+  return `${source}${separator}${parts.join(`${parsed.newline}${parsed.newline}`)}${parsed.newline}`;
 }

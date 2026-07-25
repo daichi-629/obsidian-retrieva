@@ -5,6 +5,11 @@ export interface CardFormat {
   readonly id: string;
   supports(frontmatter: Record<string, unknown>): boolean;
   parse(source: string, frontmatterEnd: number): CardFormatParseResult;
+  undoLastReview?(
+    source: string,
+    document: { rawEventLines: string[]; ranges?: { log: [number, number] | null } },
+    eventId: string,
+  ): string;
 }
 
 export interface CardFormatParseResult {

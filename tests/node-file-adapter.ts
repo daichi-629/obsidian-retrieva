@@ -67,4 +67,9 @@ export class NodeFileAdapter implements FileAdapter<NodeFileRef> {
     await fs.writeFile(full, source, "utf-8");
     return { path: relativePath.replace(/\\/g, "/"), fullPath: full };
   }
+
+  async remove(relativePath: string): Promise<void> {
+    const full = this.toFullPath(relativePath);
+    await fs.rm(full, { force: true, recursive: true });
+  }
 }

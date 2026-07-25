@@ -9,7 +9,8 @@ function frontmatterOf(source: string): {
   end: number;
   error?: string;
 } {
-  const match = /^(?:\uFEFF)?---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(source);
+  const normalized = source.replace(/\r\n?/g, "\n");
+  const match = /^(?:\uFEFF)?---\n([\s\S]*?)\n---(?:\n|$)/.exec(normalized);
   if (!match) return { data: {}, end: 0 };
   try {
     const parsed: unknown = parseYaml(match[1] ?? "");
@@ -29,9 +30,11 @@ function normalizeTags(value: unknown): string[] {
     : typeof value === "string"
       ? value.split(/[ ,]+/)
       : [];
-  return values
+  const cleaned = values
     .filter((tag): tag is string => typeof tag === "string")
-    .map(tag => tag.replace(/^#/, ""));
+    .map(tag => tag.trim().replace(/^#/, ""))
+    .filter(tag => tag.length > 0);
+  return Array.from(new Set(cleaned));
 }
 
 function parseEvents(content: string | null): {
@@ -80,7 +83,8 @@ export function parseCardMarkdown(path: string, source: string): ParsedCard {
     frontmatter: frontmatter.data,
     tags: normalizeTags(frontmatter.data.tags),
     presetId: typeof presetValue === "string" ? presetValue : null,
-    siblingGroupId: typeof siblingValue === "string" ? siblingValue : null,
+    siblingGroupId:
+      typeof siblingValue === "string" && siblingValue.trim() !== "" ? siblingValue.trim() : null,
     formatId: format.id,
     cardId: structure.cardId,
     front: structure.front,
@@ -97,8 +101,10 @@ export function parseCardMarkdown(path: string, source: string): ParsedCard {
   };
 }
 
-export function hasCardTag(source: string): boolean {
-  return normalizeTags(frontmatterOf(source).data.tags).includes(IDENTIFIERS.cardTag);
+export function hasCardTag(input: string | string[]): boolean {
+  if (Array.isArray(input)) return normalizeTags(input).includes(IDENTIFIERS.cardTag);
+  if (typeof input !== "string") return false;
+  return normalizeTags(frontmatterOf(input).data.tags).includes(IDENTIFIERS.cardTag);
 }
 
 export function hasMachineMarker(source: string): boolean {

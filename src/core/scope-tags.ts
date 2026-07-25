@@ -1,13 +1,15 @@
 import { IDENTIFIERS } from "./identifiers";
 import type { IndexedCard } from "./types";
 
-export function collectScopeTags(cards: Iterable<IndexedCard>): string[] {
+export function collectScopeTags(inputs: Iterable<IndexedCard | string>): string[] {
   const tags = new Set<string>();
-  for (const card of cards)
-    for (const tag of card.tags) {
-      const clean = tag.replace(/^#/, "").trim();
+  for (const item of inputs) {
+    const rawTags = typeof item === "string" ? [item] : item.tags;
+    for (const tag of rawTags) {
+      const clean = tag.replace(/^#/, "").replace(/\/+$/, "").trim();
       if (clean && clean !== IDENTIFIERS.cardTag) tags.add(clean);
     }
+  }
   return [...tags].sort((left, right) => left.localeCompare(right));
 }
 
@@ -24,7 +26,7 @@ export function buildTagTree(tags: string[]): TagTreeNode[] {
   for (const tag of tags) {
     let path = "";
     let siblings = roots;
-    for (const segment of tag.split("/")) {
+    for (const segment of tag.split("/").filter(Boolean)) {
       path = path ? `${path}/${segment}` : segment;
       let node = byPath.get(path);
       if (!node) {

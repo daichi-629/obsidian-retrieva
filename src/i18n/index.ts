@@ -29,3 +29,7 @@ export async function setLocale(locale: string): Promise<void> {
 export function t(key: TranslationKey, variables: Record<string, string | number> = {}): string {
   return i18n.t(key, { ...variables, defaultValue: en[key] });
 }
+
+export function getLocale(): string {
+  return i18n.language;
+}
